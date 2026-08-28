@@ -20,6 +20,8 @@ header .sp{flex:1}
 #clock{font-size:15px;color:#9fd4ff;font-family:Consolas,monospace;letter-spacing:1px}
 .mbtns button{background:rgba(0,120,200,.15);border:1px solid rgba(0,180,255,.4);color:#9fd4ff;font-size:12px;padding:5px 12px;border-radius:3px;cursor:pointer;margin-left:6px;font-family:inherit}
 .mbtns button.on{background:rgba(0,190,255,.3);color:#fff;border-color:#00d4ff;box-shadow:0 0 10px rgba(0,212,255,.45)}
+.mbtns button.cbtn{background:rgba(255,215,94,.10);border-color:rgba(255,215,94,.45);color:#ffd75e}
+.mbtns button.cbtn.act{background:rgba(255,215,94,.30);color:#fff;border-color:#ffd75e;box-shadow:0 0 10px rgba(255,215,94,.5)}
 /* ---------- layout ---------- */
 #main{display:grid;grid-template-columns:308px 1fr 336px;gap:8px;min-height:0}
 .col{display:flex;flex-direction:column;gap:8px;min-height:0}
@@ -124,6 +126,7 @@ header .sp{flex:1}
   <span id="clock">2026-08-28 00:00:00</span>
   <span class="mbtns">
     <button id="mAuto" class="on">自动演示</button><button id="mAm">早高峰</button><button id="mNt">夜间航班波</button>
+    <button id="caseBtn1" class="cbtn">▶ 案例一·夜间地库涌入</button><button id="caseBtn2" class="cbtn">▶ 案例二·早高峰截流绕行</button>
   </span>
 </header>
 
@@ -288,23 +291,78 @@ function realHourly(){let v=HPRO[new Date().getHours()]*[1,1.28,1.15,1][phaseAt(
 let nodes={hj:{q:45},gj:{q:65},dk:{q:55}};
 let flowHist=[],predSeries=[];
 function phaseAt(t){const c=t%CYC;return c<20?0:c<45?1:c<70?2:3}
-function stratOn(t){const c=t%CYC;return c>=55}
-function policeOn(t){const c=t%CYC;return c>=50}
-function rateAt(t){let r=[1.1,3.0,2.6,1.6][phaseAt(t)];
+function stratOn(t){if(SF)return SF.strat;const c=t%CYC;return c>=55}
+function policeOn(t){if(SF)return SF.police;const c=t%CYC;return c>=50}
+function rateAt(t){if(SF)return SF.rate;let r=[1.1,3.0,2.6,1.6][phaseAt(t)];
  if(mode==='am')r*=1.25; if(mode==='nt')r*=(phaseAt(t)>=1?1.15:0.8);return r}
-function compAt(t){const p=phaseAt(t);
+function compAt(t){if(SF)return SF.comp;const p=phaseAt(t);
  if(mode==='nt')return{pri:.3,ride:.46,tax:.15,inn:.09};
  if(mode==='am')return{pri:.62,ride:.18,tax:.1,inn:.1};
  return[{pri:.55,ride:.25,tax:.12,inn:.08},{pri:.38,ride:.42,tax:.12,inn:.08},{pri:.4,ride:.4,tax:.12,inn:.08},{pri:.5,ride:.3,tax:.12,inn:.08}][p]}
-function qTarget(t){const c=t%CYC,s=c>=55;
+function qTarget(t){if(SF)return SF.tg;const c=t%CYC,s=c>=55;
  if(c<20)return{hj:60,gj:90,dk:80};
  if(c<45)return{hj:150,gj:250,dk:230};
  if(c<70)return s?{hj:160,gj:310,dk:270}:{hj:230,gj:350,dk:310};
  return{hj:70,gj:100,dk:90}}
 const LV=[{n:'蓝',c:'#3aa0ff'},{n:'黄',c:'#ffd43b'},{n:'橙',c:'#ff922b'},{n:'红',c:'#ff4d4f'}];
 function lvlOf(q){return q<100?0:q<180?1:q<260?2:3}
+/* ============ 案例演示引擎 ============ */
+let SF=null,scenT=0,scenN=0,scenEv=0,scenRt=false; /* SF=当前案例帧状态 */
+const lerpQ=(t,a,b,t0,t1)=>t<=t0?a:t>=t1?b:a+(b-a)*(t-t0)/(t1-t0);
+const CASES={
+ 1:{mode:'nt',dur:44,clock0:[23,40,0],
+  events:[[0,'案例','#00d4ff','案例一 · 夜间23:40 T4到达高峰：多架航班集中落地，网约车瞬时涌入交通中心地库'],
+   [5,'预警','#ff922b','橙色预警 · 提前预警：空港大道与航景路口拥堵风险形成中'],
+   [9,'预警','#ff4d4f','红色预警：交通中心地库入口排队335m · 网约车瞬时涌入'],
+   [14,'策略','#00d4ff','可变车道启用：空港大道—航景路口西口第二专左车道→直行（LED指示牌+地面可变标线）'],
+   [15,'下发','#35e08f','空港大道航景路口东西向红绿配时增加 · 方案#A7下发信号控制器(4.2s)'],
+   [16,'下发','#35e08f','停车场入口闸机自动切换：工作车辆专用通道→社会车辆通道'],
+   [17,'警力','#3aa0ff','联动现场警力提前部署：空港大道航景路口 / 地库入口点位到位'],
+   [31,'评估','#35e08f','排队长度较预案启动前减少约40% · 未发生溢出至空港大道主线'],
+   [42,'评估','#35e08f','案例一演示完成 · 预案效果回写八步闭环持续优化']],
+  frame(t){const on=t>=14&&t<42,rel=t>=22;
+   return{phase:2,strat:on,police:t>=17&&t<42,lane:on,gar:on,det:false,
+    comp:t<22?{pri:.14,ride:.7,tax:.06,inn:.1}:{pri:.3,ride:.46,tax:.15,inn:.09},
+    rate:t<14?3.4:rel?1.3:2.2,rideDiku:t<26,
+    tg:{hj:Math.round(lerpQ(t,60,rel?95:250,3,14)),gj:Math.round(lerpQ(t,90,rel?110:170,3,14)),dk:Math.round(lerpQ(t,80,rel?135:335,3,13))},
+    cyc:on?180:140,grn:on?58:45,
+    l30:'T4多架航班集中落地 · 折算旅客>2000 · 网约车接客需求瞬时激增',
+    l15:on?'偏差率7% ≤10% · 继续执行可变车道+闸机调配方案':'地库排队偏差上行 · 管控预案预置就绪',
+    l5:'预计5min到达网约车 ≈'+Math.round(realHourly()/12)+' 辆 · 闸机通道切换就绪',
+    k2t:rel?'↓40%':'↑',k3t:rel?'↓30%':'↑'}}},
+ 2:{mode:'am',dur:44,clock0:[8,10,0],
+  events:[[0,'案例','#00d4ff','案例二 · 早高峰08:10：空港大道车流激增，上桥口及航站楼高架内道通行压力过载'],
+   [5,'预警','#ff922b','橙色预警：空港大道→高架上桥口排队上升 · 高架桥内道压力过载'],
+   [9,'预警','#ff4d4f','红色预警：高架桥出发层入口排队340m'],
+   [12,'策略','#00d4ff','平台自动启动"截流+绕行"预案：减少经空港大道上航站楼高架车流 · 转移至经翔越路上高架外道'],
+   [13,'下发','#35e08f','信号灯在车辆到达前完成配时调整 · 截流信号方案已下发'],
+   [15,'下发','#38bdf8','导航平台推送翔越路绕行诱导 · 引导比例约20%'],
+   [32,'评估','#35e08f','上桥口排队长度减少约30% · 高架桥外道利用率提升20% · 高峰通行效率显著提升'],
+   [42,'评估','#35e08f','案例二演示完成 · 预案效果回写八步闭环持续优化']],
+  frame(t){const on=t>=12&&t<42,rel=t>=20;
+   return{phase:2,strat:on,police:false,lane:on,gar:false,det:on,detour:on,
+    comp:{pri:.62,ride:.18,tax:.1,inn:.1},
+    rate:t<20?2.6:rel?1.2:1.8,
+    tg:{hj:Math.round(lerpQ(t,70,rel?120:250,2,11)),gj:Math.round(lerpQ(t,90,rel?185:340,2,10)),dk:Math.round(lerpQ(t,60,rel?90:150,2,11))},
+    cyc:on?180:140,grn:on?58:45,
+    l30:'早高峰叠加机场出发流 · 空港大道主线通行能力趋近饱和',
+    l15:on?'翔越路绕行分流实测19.8% ≈目标20% · 继续执行':'上桥排队偏差上行 · 截流预案预置就绪',
+    l5:'预计5min到达上桥车流 ≈'+Math.round(realHourly()/10)+' 辆 · 车辆到达前完成配时调整',
+    k2t:rel?'↓25%':'↑',k3t:rel?'↓30%':'↑'}}}
+};
+function startCase(n){const c=CASES[n];SF=null;scenT=0;scenEv=0;scenRt=false;mode=c.mode;scenN=n;
+ nodes.hj.q=60;nodes.gj.q=90;nodes.dk.q=80;vehicles=[];$('feed').innerHTML='';
+ SF=Object.assign({},c.frame(0));
+ document.querySelectorAll('.mbtns button').forEach(b=>b.classList.remove('on'));
+ $('caseBtn'+n).classList.add('act');
+ pushLog('演示','#00d4ff','案例'+['','一','二'][n]+'演示启动 · '+['','夜间T4航班波 · 网约车涌入地库','早高峰过载 · 截流+绕行翔越路'][n]);}
+function stopCase(){if(!scenN)return;SF=null;const n=scenN;scenN=0;
+ $('caseBtn'+n).classList.remove('act');
+ document.getElementById(mode==='nt'?'mNt':mode==='am'?'mAm':'mAuto').classList.add('on');}
 /* ============ 车辆生成 ============ */
 function destOf(t,strat){const r=Math.random();
+ if(SF){if(SF.rideDiku&&t==='ride')return Math.random()<.82?'diku':'wangyue';
+  if(SF.detour&&Math.random()<.2)return Math.random()<.5?'gjT4a':'gjT3b';}
  if(t==='inn')return'nei';
  if(t==='tax')return r<.5?'taxi':r<.8?'gjT3a':'diku';
  if(t==='ride')return r<.45?'diku':r<.8?'gjT4a':'wangyue';
@@ -351,7 +409,7 @@ function draw(){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,LW,LH);
  glow([[779,415],[779,150]],gj);                       /* T4高架（14号路匝道↑→高架西口） */
  glow([[443,306],[443,385],[779,385]],lh);             /* 翔越路进场（航安路↓→翔越路→） */
  /* 绕行诱导动画：航安路↓翔越路→14号路匝道↑高架 */
- if(stratOn(simT)){ctx.save();ctx.setLineDash([10,16]);ctx.lineDashOffset=-simT*50;
+ if(SF?SF.det:stratOn(simT)){ctx.save();ctx.setLineDash([10,16]);ctx.lineDashOffset=-simT*50;
   poly('rgba(0,212,255,.75)',2,[[443,306],[443,385],[779,385],[779,150]]);ctx.restore();}
  /* 导航平台修正标注 */
  ctx.textAlign='center';ctx.fillStyle='#ffd75e';ctx.font='10px Microsoft YaHei';
@@ -359,7 +417,7 @@ function draw(){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,LW,LH);
  ctx.save();ctx.translate(1266,300);ctx.rotate(Math.PI/2);ctx.fillText('环东1号路（导航实际名）',0,0);ctx.restore();
  ctx.fillStyle='#7fb3dc';ctx.fillText('真北偏东北23° · 与导航平台方位一致',1105,730);
  /* 可变车道（空港大道分岔口西侧） */
- const von=stratOn(simT);
+ const von=SF?SF.lane:stratOn(simT);
  ctx.save();ctx.setLineDash([8,8]);const vc=von?'#35e08f':'rgba(0,212,255,.5)';
  for(const dy of[-4,4])line(560,306+dy,614,306+dy,vc,1.4);ctx.restore();
  ctx.font='10px Microsoft YaHei';ctx.fillStyle=von?'#a9f5cd':'#8ec9ff';
@@ -404,7 +462,7 @@ function drawChart(){const w=chCvs.clientWidth,h=chCvs.clientHeight;
  cctx.strokeStyle='rgba(255,255,255,.35)';cctx.setLineDash([3,4]);cctx.beginPath();cctx.moveTo(X(30),pT);cctx.lineTo(X(30),h-pB);cctx.stroke();cctx.setLineDash([]);
  cctx.textAlign='left';cctx.fillStyle='#35e08f';cctx.fillText('— 实际流量',pL+6,pT+9);cctx.fillStyle='#00d4ff';cctx.fillText('--- 预测流量(辆/时)',pL+70,pT+9);}
 /* ============ 面板刷新 ============ */
-function updUI(){const ph=phaseAt(simT),st=stratOn(simT);
+function updUI(){const ph=SF?SF.phase:phaseAt(simT),st=SF?SF.strat:stratOn(simT);
  const nowD=new Date(),frac=dayFrac(nowD),tot=Math.round(DAILY_VEH*frac+liveExtra);
  $('stTotal').textContent=tot.toLocaleString();
  $('stPax').textContent=Math.round(DAILY_PAX*frac).toLocaleString();
@@ -424,13 +482,13 @@ function updUI(){const ph=phaseAt(simT),st=stratOn(simT);
   bn.style.display='block';bn.style.background=LV[mx].c+'26';bn.style.color=LV[mx].c;bn.style.border='1px solid '+LV[mx].c;
   bn.textContent=`${LV[mx].n}色预警 · ${wk[0]}排队 ${Math.round(wk[1])}m · ${st?'管控方案执行中':'研判启动中'}`;}
  else bn.style.display='none';
- $('l30').textContent=['车流平稳 · 无航班叠加 · 预警蓝色','进港航班波叠加 · 折算旅客>2000 · 修正系数1.3',st?'双高峰叠加 · 预案已预置 · 警力部署中':'进港航班波到达 · 双高峰叠加 · 预警升级','趋势回落 · 预警降级 · 恢复常态配时'][ph];
- const dev=ph===0?rnd(4,9):st?rnd(8,12):rnd(12,24);
- $('l15').textContent=dev<=10?`偏差率 ${dev.toFixed(0)}% ≤10% · 继续执行原方案`:`偏差率 ${dev.toFixed(0)}% · 自动修正剩余时段 +15%`;
- $('l5').textContent=`预计5min到达 ${Math.round(realHourly()/12)} 辆 · 车道级配时就绪 · 置信度 ${ri(74,93)}%`;
- $('cyc').textContent=st?180:140;$('grn').textContent=(st?58:45)+'%';$('greenBar').style.width=(st?58:45)+'%';
- $('tgLane').classList.toggle('on',st);$('tgDet').classList.toggle('on',st);
- $('tgPol').classList.toggle('on',policeOn(simT));$('tgGar').classList.toggle('on',st);
+ $('l30').textContent=SF?SF.l30:['车流平稳 · 无航班叠加 · 预警蓝色','进港航班波叠加 · 折算旅客>2000 · 修正系数1.3',st?'双高峰叠加 · 预案已预置 · 警力部署中':'进港航班波到达 · 双高峰叠加 · 预警升级','趋势回落 · 预警降级 · 恢复常态配时'][ph];
+ const dev=ph===0&&!SF?rnd(4,9):st?rnd(8,12):rnd(12,24);
+ $('l15').textContent=SF?SF.l15:dev<=10?`偏差率 ${dev.toFixed(0)}% ≤10% · 继续执行原方案`:`偏差率 ${dev.toFixed(0)}% · 自动修正剩余时段 +15%`;
+ $('l5').textContent=SF?SF.l5:`预计5min到达 ${Math.round(realHourly()/12)} 辆 · 车道级配时就绪 · 置信度 ${ri(74,93)}%`;
+ $('cyc').textContent=SF?SF.cyc:(st?180:140);$('grn').textContent=(SF?SF.grn:st?58:45)+'%';$('greenBar').style.width=(SF?SF.grn:st?58:45)+'%';
+ $('tgLane').classList.toggle('on',SF?SF.lane:st);$('tgDet').classList.toggle('on',SF?SF.det:st);
+ $('tgPol').classList.toggle('on',SF?SF.police:policeOn(simT));$('tgGar').classList.toggle('on',SF?SF.gar:st);
  const onSet=new Set([1,2,3]);
  if(ph===1)onSet.add(4);
  if(ph===2){onSet.add(4);onSet.add(5);if(st){onSet.add(6);onSet.add(7)}}
@@ -439,10 +497,17 @@ function updUI(){const ph=phaseAt(simT),st=stratOn(simT);
  const sec=Math.round(200+nodes.gj.q*.5);
  $('k1').textContent=Math.floor(sec/60)+"'"+String(sec%60).padStart(2,'0')+'"';
  $('k2').textContent=Math.round(nodes.hj.q);$('k3').textContent=Math.round(nodes.gj.q);
- $('k4').textContent='+'+(st?18:12);$('k5').textContent=st?ri(20,25):ph>=1?ri(6,10):0;}
+ if(SF){$('k2t').textContent=SF.k2t;$('k3t').textContent=SF.k3t}
+ $('k4').textContent='+'+(st?18:12);$('k5').textContent=SF?(SF.det?ri(18,22):ri(3,6)):st?ri(20,25):ph>=1?ri(6,10):0;}
 /* ============ 主循环 ============ */
 let last=performance.now(),accUI=1,accFlow=0,accAmb=3,prevPhase=-1,prevStrat=false,prevPolice=false;
 function loop(now){const dt=Math.min(.06,(now-last)/1000);last=now;simT+=dt;liveExtra+=realHourly()/3600*dt;
+ if(SF){scenT+=dt;const c=CASES[scenN];SF=Object.assign({},c.frame(scenT));
+  while(scenEv<c.events.length&&scenT>=c.events[scenEv][0]){const e=c.events[scenEv++];pushLog(e[1],e[2],e[3])}
+  if(scenN===2&&scenT>=14.2&&!scenRt){scenRt=true; /* 导航引导约20%在途车辆绕行翔越路 */
+   for(const v of vehicles){if((v.rk==='gjT3a'||v.rk==='gjT4b')&&v.s<v.route.tot*.3&&Math.random()<.2){
+    v.rk=Math.random()<.5?'gjT4a':'gjT3b';v.route=ROUTES[v.rk];v.s=Math.min(v.s,18);v.dest=v.rk;}}}
+  if(scenT>=c.dur)stopCase();}
  spawnAcc+=rateAt(simT)*dt;while(spawnAcc>=1){spawnAcc--;spawn()}
  for(let i=vehicles.length-1;i>=0;i--){const v=vehicles[i],p=routePos(v.route,v.s);let f=1;
   const nd=ROUTE_NODE[v.rk];
@@ -454,6 +519,7 @@ function loop(now){const dt=Math.min(.06,(now-last)/1000);last=now;simT+=dt;live
  accFlow+=dt;if(accFlow>=2){accFlow=0;actHist.push(clamp(realHourly()+rnd(-350,350),0,9800));if(actHist.length>31)actHist.shift()}
  accAmb+=dt;if(accAmb>8){accAmb=0;pushLog('感知','#3aa0ff',pick(['边缘计算单元：雷达/视频结构化正常 · 识别准确率98.6%','卡口过车匹配车辆库 · 0.5s完成身份分类','数据质量看板：设备在线率 99.2%','航班动态同步：未来30min进港12架次']))}
  const ph=phaseAt(simT),st=stratOn(simT),po=policeOn(simT);
+ if(!SF){
  if(ph===1&&prevPhase===0)pushLog('预警','#ffd43b','黄色预警：进港航班波叠加，高架桥出发层入口排队上升');
  if(ph===2&&prevPhase===1)pushLog('预警','#ff922b','橙色预警：地库入口排队>260m · 网约车瞬时涌入');
  if(st&&!prevStrat){pushLog('策略','#00d4ff','可变车道启用：专左→直行 · 周期140s→180s · 绿信比45%→58%');
@@ -461,6 +527,7 @@ function loop(now){const dt=Math.min(.06,(now-last)/1000);last=now;simT+=dt;live
   pushLog('警力','#3aa0ff','警力提前部署：航景路口 / 高架上口点位到位')}
  if(ph===3&&prevPhase===2)pushLog('评估','#35e08f','航景路排队↓50% · 上桥口↓40% · 未溢出主线 · 方案有效，反馈调优');
  if(ph===0&&prevPhase===3)pushLog('感知','#3aa0ff','态势恢复常态 · 切换固定配时兜底 · 系统持续监测');
+ }
  prevPhase=ph;prevStrat=st;prevPolice=po;
  draw();drawChart();requestAnimationFrame(loop)}
 /* ============ 交互 ============ */
@@ -472,12 +539,17 @@ cvs.addEventListener('mousemove',e=>{const r=cvs.getBoundingClientRect();
   tip.innerHTML=`<b>${best.plate}</b> · ${TYPES[best.type].n}<br>预判目的地：${DESTN[best.dest]}<br>置信度 ${best.conf}% · 车速 ${(best.sp*.62).toFixed(0)} km/h`;}
  else tip.style.display='none';});
 cvs.addEventListener('mouseleave',()=>$('tip').style.display='none');
-function setMode(m,btn){mode=m;document.querySelectorAll('.mbtns button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+function setMode(m,btn){mode=m;if(SF)stopCase();document.querySelectorAll('.mbtns button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
  pushLog('模式','#00d4ff','演示场景切换：'+btn.textContent);}
 $('mAuto').onclick=e=>setMode('auto',e.target);
 $('mAm').onclick=e=>setMode('am',e.target);
 $('mNt').onclick=e=>setMode('nt',e.target);
-setInterval(()=>{const d=new Date();$('clock').textContent=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');},1000);
+$('caseBtn1').onclick=()=>startCase(1);
+$('caseBtn2').onclick=()=>startCase(2);
+setInterval(()=>{if(SF&&scenN){const c=CASES[scenN].clock0,s=Math.floor(scenT);
+  const hh=String(c[0]+Math.floor((c[1]*60+c[2]+s)/3600)).padStart(2,'0'),mm=String(Math.floor((c[1]*60+c[2]+s)/60)%60).padStart(2,'0'),ss=String((c[2]+s)%60).padStart(2,'0');
+  $('clock').textContent='2026-08-29 '+hh+':'+mm+':'+ss;return;}
+ const d=new Date();$('clock').textContent=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');},1000);
 /* ============ 启动 ============ */
 fit();
 for(let i=0;i<46;i++){spawn();vehicles[vehicles.length-1].s=rnd(10,vehicles[vehicles.length-1].route.tot-20);}
