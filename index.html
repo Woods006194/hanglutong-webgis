@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>“航陆通”交通信号灯智能化动态调控 · WebGIS态势可视化</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:#070f1e;color:#d8ecff;font-family:"Microsoft YaHei","PingFang SC",sans-serif;overflow:auto}
+#app{display:grid;grid-template-rows:54px 1fr 172px;gap:8px;padding:8px;height:100vh;min-height:960px;min-width:1560px}
+/* ---------- header ---------- */
+header{display:flex;align-items:center;gap:16px;padding:0 16px;background:linear-gradient(90deg,rgba(0,60,120,.55),rgba(0,30,70,.25) 55%,rgba(0,60,120,.55));border:1px solid rgba(0,170,255,.28);border-radius:6px;position:relative;overflow:hidden}
+header::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 120px,rgba(0,200,255,.06) 120px 121px)}
+header h1{font-size:20px;letter-spacing:2px;font-weight:700;color:#eaf7ff;text-shadow:0 0 12px rgba(0,190,255,.6)}
+header h1 b{color:#00d4ff}
+header .sub{font-size:12px;color:#7fb3dc;letter-spacing:1px;border-left:1px solid rgba(0,170,255,.35);padding-left:14px}
+header .sp{flex:1}
+#lvlChip{padding:4px 14px;border-radius:3px;font-size:13px;font-weight:700;letter-spacing:2px;background:rgba(58,160,255,.18);border:1px solid #3aa0ff;color:#8ec9ff;transition:all .5s}
+#clock{font-size:15px;color:#9fd4ff;font-family:Consolas,monospace;letter-spacing:1px}
+.mbtns button{background:rgba(0,120,200,.15);border:1px solid rgba(0,180,255,.4);color:#9fd4ff;font-size:12px;padding:5px 12px;border-radius:3px;cursor:pointer;margin-left:6px;font-family:inherit}
+.mbtns button.on{background:rgba(0,190,255,.3);color:#fff;border-color:#00d4ff;box-shadow:0 0 10px rgba(0,212,255,.45)}
+/* ---------- layout ---------- */
+#main{display:grid;grid-template-columns:308px 1fr 336px;gap:8px;min-height:0}
+.col{display:flex;flex-direction:column;gap:8px;min-height:0}
+.panel{background:linear-gradient(180deg,rgba(13,38,72,.92),rgba(8,22,44,.94));border:1px solid rgba(0,170,255,.22);border-radius:6px;padding:10px 12px;position:relative;box-shadow:inset 0 0 24px rgba(0,80,160,.12)}
+.panel h3{font-size:13px;color:#bfe6ff;letter-spacing:1px;font-weight:700;padding-left:8px;border-left:3px solid #00d4ff;margin-bottom:8px;display:flex;align-items:baseline}
+.panel h3 .en{margin-left:auto;font-size:9px;color:#3f6f9f;letter-spacing:2px;font-weight:400}
+.grow{flex:1;min-height:0;display:flex;flex-direction:column}
+/* ---------- left: stat ---------- */
+.big{display:flex;align-items:baseline;gap:8px;margin:2px 0 8px}
+.big b{font-size:30px;color:#00d4ff;font-family:Consolas,monospace;text-shadow:0 0 14px rgba(0,212,255,.55)}
+.big i{font-style:normal;font-size:11px;color:#7fb3dc;white-space:nowrap}
+.donutWrap{display:flex;gap:12px;align-items:center}
+#donut{width:92px;height:92px;border-radius:50%;background:conic-gradient(#35e08f 0 55%,#ffb340 0 80%,#ffd75e 0 92%,#38bdf8 0 100%);position:relative;flex:none}
+#donut::after{content:"";position:absolute;inset:16px;border-radius:50%;background:#0a1c38;box-shadow:inset 0 0 10px #000}
+#donut b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#9fd4ff;z-index:1;flex-direction:column;line-height:1.1}
+.dlegend{list-style:none;font-size:12px;flex:1}
+.dlegend li{display:flex;align-items:center;gap:6px;margin:4px 0;color:#a8cbe8}
+.dlegend s{width:9px;height:9px;border-radius:2px;text-decoration:none;flex:none}
+.dlegend b{margin-left:auto;color:#eaf7ff;font-family:Consolas,monospace}
+/* ---------- left: weekly real data ---------- */
+.wk{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.wkc>b{font-size:10.5px;display:block;margin-bottom:3px;letter-spacing:1px}
+.wkr{display:flex;align-items:center;gap:4px;font-size:10px;color:#a8cbe8;line-height:1.8}
+.wkr span{flex:1;overflow:hidden;white-space:nowrap}
+.wkr b{font-family:Consolas,monospace;color:#eaf7ff;font-size:10.5px}
+.wkr em{font-style:normal;font-size:9.5px;flex:none}
+.wkr em.up{color:#ff922b}.wkr em.dn{color:#35e08f}
+.wkf{margin-top:6px;font-size:10px;color:#7fb3dc;border-top:1px dashed rgba(0,150,255,.2);padding-top:5px;line-height:1.6}
+/* ---------- left: feed ---------- */
+#feed{list-style:none;overflow:hidden;flex:1;font-size:11.5px}
+#feed li{display:flex;gap:6px;align-items:center;padding:4px 2px;border-bottom:1px dashed rgba(0,150,255,.14);animation:fin .4s ease}
+@keyframes fin{from{opacity:0;transform:translateY(-6px)}to{opacity:1}}
+#feed .pl{font-family:Consolas,monospace;color:#eaf7ff;flex:none}
+#feed .ty{flex:none;font-size:10px;padding:1px 6px;border-radius:2px;border:1px solid}
+#feed .ds{color:#8fb8dc;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;flex:1}
+#feed .cf{color:#00d4ff;font-family:Consolas,monospace;flex:none}
+/* ---------- left: 3level ---------- */
+.lv{display:flex;gap:8px;align-items:center;margin:7px 0}
+.lv b{flex:none;width:52px;text-align:center;font-size:12px;padding:5px 0;border-radius:3px;font-family:Consolas,monospace}
+.lv .b30{background:rgba(58,160,255,.16);border:1px solid #3aa0ff;color:#8ec9ff}
+.lv .b15{background:rgba(255,212,59,.14);border:1px solid #ffd43b;color:#ffe28a}
+.lv .b5{background:rgba(255,77,79,.14);border:1px solid #ff4d4f;color:#ff9c9e}
+.lv div{font-size:11.5px;line-height:1.5}
+.lv span{color:#cfe7ff}
+.lv em{display:block;font-style:normal;color:#7fb3dc;font-size:10.5px}
+/* ---------- map ---------- */
+#mapWrap{position:relative;overflow:hidden;border:1px solid rgba(0,170,255,.28);border-radius:6px;background:radial-gradient(1200px 600px at 50% 40%,#0c2242 0%,#081527 70%)}
+#map{position:absolute;inset:0}
+#legend{position:absolute;left:10px;bottom:10px;background:rgba(6,18,36,.82);border:1px solid rgba(0,170,255,.25);border-radius:4px;padding:8px 10px;font-size:10.5px;color:#a8cbe8;line-height:1.9;backdrop-filter:blur(2px)}
+#legend .row{display:flex;gap:10px;align-items:center}
+#legend s{text-decoration:none;display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:middle}
+#legend .dot{width:8px;height:5px;border-radius:1px}
+#legend .sq{width:8px;height:8px;border-radius:50%}
+#north{position:absolute;right:12px;top:10px;font-size:10.5px;color:#7fb3dc;text-align:right;line-height:1.7}
+#north .n{font-size:15px;color:#00d4ff}
+#banner{position:absolute;top:10px;left:50%;transform:translateX(-50%);padding:6px 22px;border-radius:3px;font-size:13px;font-weight:700;letter-spacing:2px;display:none;animation:bp 1.2s infinite}
+@keyframes bp{0%,100%{box-shadow:0 0 6px rgba(255,77,79,.4)}50%{box-shadow:0 0 22px rgba(255,77,79,.9)}}
+#tip{position:absolute;display:none;background:rgba(5,16,32,.94);border:1px solid #00d4ff;border-radius:4px;padding:7px 10px;font-size:11px;line-height:1.7;color:#cfe7ff;pointer-events:none;z-index:9;white-space:nowrap}
+#tip b{color:#00d4ff;font-family:Consolas,monospace}
+/* ---------- right: pipeline ---------- */
+#pipe{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:5px}
+#pipe li{font-size:11px;color:#6f94b8;background:rgba(0,70,140,.14);border:1px solid rgba(0,150,255,.14);border-radius:3px;padding:5px 7px;display:flex;gap:6px;align-items:center;transition:all .4s}
+#pipe li b{font-family:Consolas,monospace;font-size:12px}
+#pipe li.on{color:#eaf7ff;border-color:#00d4ff;background:rgba(0,190,255,.2);box-shadow:0 0 10px rgba(0,212,255,.35)}
+#pipe li.on b{color:#00d4ff}
+/* ---------- right: nodes ---------- */
+.node{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:12px}
+.node .nm{flex:1;color:#cfe7ff}
+.node .q{font-family:Consolas,monospace;color:#9fd4ff;font-size:11px;width:64px;text-align:right}
+.chip{flex:none;min-width:40px;text-align:center;font-size:11px;font-weight:700;padding:2px 8px;border-radius:2px;letter-spacing:2px}
+/* ---------- right: signal ---------- */
+.sigrow{display:flex;gap:8px;font-size:11.5px;margin:5px 0;align-items:center;color:#a8cbe8}
+.sigrow b{color:#00d4ff;font-family:Consolas,monospace;font-size:14px}
+.bar{flex:1;height:8px;background:rgba(0,90,170,.25);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#00d4ff,#35e08f);width:45%;transition:width 1s}
+#strats{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:7px}
+#strats s{text-decoration:none;font-size:11px;text-align:center;padding:5px 0;border-radius:3px;border:1px dashed rgba(0,150,255,.25);color:#547a9e;transition:all .4s}
+#strats s.on{border:1px solid #35e08f;color:#a9f5cd;background:rgba(53,224,143,.14);box-shadow:0 0 8px rgba(53,224,143,.35)}
+/* ---------- right: log ---------- */
+#log{list-style:none;overflow:hidden;flex:1;font-size:11px;line-height:1.6}
+#log li{padding:3px 2px;border-bottom:1px dashed rgba(0,150,255,.12);color:#8fb8dc;animation:fin .4s ease}
+#log li b{font-family:Consolas,monospace;color:#5f8cb4;font-weight:400;margin-right:5px}
+#log li .t{padding:0 5px;border-radius:2px;margin-right:5px;font-size:10px}
+/* ---------- footer ---------- */
+#foot{display:grid;grid-template-columns:1.25fr 1fr;gap:8px;min-height:0}
+#chart{width:100%;height:118px;display:block}
+#kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;align-content:start}
+.kpi{background:rgba(0,70,140,.14);border:1px solid rgba(0,150,255,.16);border-radius:4px;padding:7px 10px}
+.kpi em{font-style:normal;font-size:10.5px;color:#7fb3dc;display:block}
+.kpi b{font-size:19px;color:#00d4ff;font-family:Consolas,monospace}
+.kpi b small{font-size:10px;color:#7fb3dc}
+.kpi .up{color:#35e08f}.kpi .dn{color:#ff922b}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <h1>“<b>航陆通</b>”交通信号灯智能化动态调控系统</h1>
+  <span class="sub">杭州萧山国际机场 · WebGIS态势可视化 | 感知—预判—决策—执行—评估</span>
+  <span class="sp"></span>
+  <span id="lvlChip">总体预警 · 蓝</span>
+  <span id="clock">2026-08-28 00:00:00</span>
+  <span class="mbtns">
+    <button id="mAuto" class="on">自动演示</button><button id="mAm">早高峰</button><button id="mNt">夜间航班波</button>
+  </span>
+</header>
+
+<div id="main">
+  <!-- ================= left ================= -->
+  <div class="col">
+    <div class="panel">
+      <h3>西大门实时流量<span class="en">REAL-TIME FLOW</span></h3>
+      <div class="big"><b id="stTotal">0</b><i>辆·今日累计</i><b id="stPax" style="font-size:19px;color:#ffd75e;text-shadow:0 0 10px rgba(255,215,94,.5)">0</b><i>人次·今日客流</i></div>
+      <div class="donutWrap">
+        <div id="donut"><b><span id="dRate">0</span>辆/时</b></div>
+        <ul class="dlegend">
+          <li><s style="background:#35e08f"></s>社会私家车<b id="cPri">0</b></li>
+          <li><s style="background:#ffb340"></s>网约车<b id="cRide">0</b></li>
+          <li><s style="background:#ffd75e"></s>出租车<b id="cTax">0</b></li>
+          <li><s style="background:#38bdf8"></s>内部固定车辆<b id="cIn">0</b></li>
+        </ul>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>关键节点周报 · 现场真实数据<span class="en">8.17-8.23</span></h3>
+      <div class="wk">
+        <div class="wkc"><b style="color:#ffd75e">出租车 · 日均</b>
+          <div class="wkr"><span>西大门 西→东</span><b>3,315</b><em class="up">↑7.5%</em></div>
+          <div class="wkr"><span>西大门 东→西</span><b>3,366</b><em class="up">↑8.95%</em></div>
+          <div class="wkr"><span>上高架</span><b>1,053</b><em class="up">↑12.9%</em></div>
+          <div class="wkr"><span>T3上客点</span><b>1,746</b><em class="up">↑0.58%</em></div>
+          <div class="wkr"><span>T4上客点</span><b>660</b><em class="dn">↓0.15%</em></div>
+        </div>
+        <div class="wkc"><b style="color:#ffb340">网约车 · 日均</b>
+          <div class="wkr"><span>西大门 西→东</span><b>27,458</b><em class="up">↑10.43%</em></div>
+          <div class="wkr"><span>西大门 东→西</span><b>27,836</b><em class="up">↑10.61%</em></div>
+          <div class="wkr"><span>上高架</span><b>21,804</b><em class="up">↑12.97%</em></div>
+          <div class="wkr"><span>停车场</span><b>11,459</b><em class="up">↑9.98%</em></div>
+          <div class="wkr"><span>上客点</span><b>15,101</b><em class="up">↑2.33%</em></div>
+        </div>
+      </div>
+      <div class="wkf">8.20—8.26：西大门流量 90.46万（日均12.9万）· 客流量 110.44万人次（日均15.78万，接近暑运单日纪录15.96万）<br>数据口径：现场卡口统计 2026.8.17—8.26 · 吞吐背景：2025年航班33万架次/旅客5046万人次</div>
+    </div>
+    <div class="panel grow">
+      <h3>身份识别 · 目的地预判<span class="en">ID &amp; DESTINATION</span></h3>
+      <ul id="feed"></ul>
+    </div>
+    <div class="panel">
+      <h3>三级递进式预判<span class="en">30/15/5 MIN</span></h3>
+      <div class="lv"><b class="b30">30min</b><div><span>宏观趋势研判</span><em id="l30">车流平稳 · 无航班叠加 · 预警蓝色</em></div></div>
+      <div class="lv"><b class="b15">15min</b><div><span>中观措施校验</span><em id="l15">偏差率 6% ≤10% · 继续执行原方案</em></div></div>
+      <div class="lv"><b class="b5">5min</b><div><span>微观个体推演</span><em id="l5">预计到达 62 辆 · 车道级配时就绪</em></div></div>
+    </div>
+  </div>
+
+  <!-- ================= map ================= -->
+  <div id="mapWrap">
+    <canvas id="map"></canvas>
+    <div id="banner"></div>
+    <div id="legend">
+      <div class="row"><s class="dot" style="background:#35e08f"></s>私家车 <s class="dot" style="background:#ffb340"></s>网约车 <s class="dot" style="background:#ffd75e"></s>出租车 <s class="dot" style="background:#38bdf8"></s>内部车辆</div>
+      <div class="row"><s style="background:#17b877"></s>畅通 <s style="background:#f5c542"></s>缓行 <s style="background:#f0653a"></s>拥堵 <s style="background:#e03131"></s>严重</div>
+      <div class="row"><s class="sq" style="background:#3aa0ff"></s>蓝 <s class="sq" style="background:#ffd43b"></s>黄 <s class="sq" style="background:#ff922b"></s>橙 <s class="sq" style="background:#ff4d4f"></s>红 四级预警 &nbsp;|&nbsp; ⊓ 公安卡口 &nbsp;|&nbsp; ▦ 可变车道</div>
+    </div>
+    <div id="north"><span class="n">▲</span> N<br>比例尺 · 示意<br><span style="color:#00d4ff">收费站→高架入口 2.5km / 3-4min</span></div>
+    <div id="tip"></div>
+  </div>
+
+  <!-- ================= right ================= -->
+  <div class="col">
+    <div class="panel">
+      <h3>八步业务闭环<span class="en">CLOSED LOOP</span></h3>
+      <ul id="pipe">
+        <li id="s1"><b>01</b>感知采集</li><li id="s5"><b>05</b>拥堵预警</li>
+        <li id="s2"><b>02</b>边缘解析</li><li id="s6"><b>06</b>策略生成</li>
+        <li id="s3"><b>03</b>身份识别</li><li id="s7"><b>07</b>指令下发</li>
+        <li id="s4"><b>04</b>车流预判</li><li id="s8"><b>08</b>效果评估</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>关键节点拥堵预警<span class="en">4-LEVEL</span></h3>
+      <div class="node"><span class="nm">空港大道—航景路路口</span><span class="q" id="qHj">40m</span><span class="chip" id="wHj">蓝</span></div>
+      <div class="node"><span class="nm">高架桥出发层入口</span><span class="q" id="qGj">60m</span><span class="chip" id="wGj">蓝</span></div>
+      <div class="node"><span class="nm">交通中心地库入口</span><span class="q" id="qDk">50m</span><span class="chip" id="wDk">蓝</span></div>
+    </div>
+    <div class="panel">
+      <h3>信号配时 · 管控策略<span class="en">SIGNAL PLAN</span></h3>
+      <div class="sigrow">航景路口周期 <b id="cyc">140</b>s &nbsp; 东西绿信比</div>
+      <div class="sigrow"><div class="bar"><i id="greenBar"></i></div><b id="grn">45%</b></div>
+      <div id="strats">
+        <s id="tgLane">可变车道切换</s><s id="tgDet">诱导绕行·翔越路</s>
+        <s id="tgPol">警力提前部署</s><s id="tgGar">地库通道调配</s>
+      </div>
+    </div>
+    <div class="panel grow">
+      <h3>指令下发 · 处置日志<span class="en">COMMAND LOG</span></h3>
+      <ul id="log"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- ================= footer ================= -->
+<div id="foot">
+  <div class="panel">
+    <h3>空港大道中段车流预测（未来30分钟）<span class="en">PREDICTION vs ACTUAL</span></h3>
+    <canvas id="chart"></canvas>
+  </div>
+  <div class="panel">
+    <h3>运行成效指标<span class="en">KPI</span></h3>
+    <div id="kpis">
+      <div class="kpi"><em>主干道平均通行时间</em><b id="k1">3'42"</b> <small class="up">↓15%</small></div>
+      <div class="kpi"><em>航景路口排队长度</em><b id="k2">40</b><small>m</small> <small class="up" id="k2t">↓50%</small></div>
+      <div class="kpi"><em>上桥口排队长度</em><b id="k3">60</b><small>m</small> <small class="up" id="k3t">↓40%</small></div>
+      <div class="kpi"><em>关键交叉口通行能力</em><b id="k4">+15</b><small>%</small></div>
+      <div class="kpi"><em>绕行翔越路比例</em><b id="k5">0</b><small>%</small></div>
+      <div class="kpi"><em>管控响应时间</em><b id="k6">4.2</b><small>s · 秒级</small></div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+"use strict";
+/* ============ 基础工具 ============ */
+const $=id=>document.getElementById(id);
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rnd(a,b+1));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+/* ============ 路网几何（按PDF原图标注坐标换算 · 画布1280x780） ============ */
+const PX=x=>x*0.1106-7, PY=y=>(8885-y)*0.1607+20;
+const PT={toll:[70,417],hj:[761,417],gj:[807,220],dk:[788,417]};
+function mkRoute(pts){let segs=[],tot=0;for(let i=0;i<pts.length-1;i++){const L=Math.hypot(pts[i+1][0]-pts[i][0],pts[i+1][1]-pts[i][1]);segs.push({a:pts[i],b:pts[i+1],L,st:tot});tot+=L}return{segs,tot}}
+function routePos(r,s){s=clamp(s,0,r.tot-0.001);for(let i=r.segs.length-1;i>=0;i--){const g=r.segs[i];if(s>=g.st){const t=(s-g.st)/g.L;return{x:g.a[0]+(g.b[0]-g.a[0])*t,y:g.a[1]+(g.b[1]-g.a[1])*t,ang:Math.atan2(g.b[1]-g.a[1],g.b[0]-g.a[0])}}}return{x:r.segs[0].a[0],y:r.segs[0].a[1],ang:0}}
+const ROUTES={
+ gaojia:mkRoute([PT.toll,PT.hj,[807,417],PT.gj,[870,270],[1180,270]]),
+ rao:mkRoute([PT.toll,[296,417],[296,518],[807,518],[807,220],[870,270],[1180,270]]),
+ diku:mkRoute([PT.toll,PT.hj,PT.dk,[1070,430]]),
+ wangyue:mkRoute([PT.toll,PT.hj,[807,417],PT.gj,[679,220],[679,250]]),
+ taxi:mkRoute([PT.toll,[296,417],[296,703],[372,703]]),
+ nei:mkRoute([PT.toll,[656,417],[656,452]])
+};
+const NODE_POS={hj:PT.hj,gj:PT.gj,dk:PT.dk};
+const ROUTE_NODE={gaojia:'gj',rao:'gj',diku:'dk',wangyue:null,taxi:null,nei:null};
+/* ============ 车辆类型 ============ */
+const TYPES={pri:{c:'#35e08f',n:'社会私家车'},ride:{c:'#ffb340',n:'网约车'},tax:{c:'#ffd75e',n:'出租车'},inn:{c:'#38bdf8',n:'内部固定'}};
+const DESTN={gaojia:'T3/T4高架出发层',rao:'翔越路绕行→出发层',diku:'交通中心地下车库',wangyue:'网约车停车场',taxi:'出租车T3蓄车场',nei:'工作区(办公/货运)'};
+function mkPlate(t){const c='ABCDEFGHJKLMNPQRSTUVWXYZ',d='0123456789';
+ if(t==='ride')return '浙A·D'+Array.from({length:5},()=>pick(d)).join('');
+ if(t==='tax')return '浙A·T'+ri(100,999);
+ return '浙A·'+pick(c)+pick(d)+pick(c+d)+pick(d)+pick(c+d);}
+/* ============ 仿真状态 ============ */
+const CYC=90;let simT=0,mode='auto';
+let vehicles=[],spawnAcc=0,liveExtra=0;
+/* ============ 真实数据基准（现场卡口统计 2026.8.17—8.26） ============ */
+const DAILY_VEH=129228,DAILY_PAX=157800; /* 西大门日均流量/日均客流 */
+const COMP={pri:.697,ride:.213,tax:.026,inn:.064}; /* 车型构成：网约车2.75万/出租0.33万等折算 */
+const HPRO=[2200,1800,1600,1700,2200,3200,4800,6200,7200,7600,7800,7600,7200,7000,7200,7400,7800,8200,8000,7200,6200,5200,4200,3200];
+const HSUM=HPRO.reduce((a,b)=>a+b,0);
+function dayFrac(d){const h=d.getHours(),m=d.getMinutes()/60;let s=0;for(let i=0;i<h;i++)s+=HPRO[i];return (s+HPRO[h]*m)/HSUM}
+function realHourly(){let v=HPRO[new Date().getHours()]*[1,1.28,1.15,1][phaseAt(simT)];
+ if(mode==='am')v*=1.1;if(mode==='nt')v*=1.15;return Math.min(Math.round(v),9800)}
+let nodes={hj:{q:45},gj:{q:65},dk:{q:55}};
+let flowHist=[],predSeries=[];
+function phaseAt(t){const c=t%CYC;return c<20?0:c<45?1:c<70?2:3}
+function stratOn(t){const c=t%CYC;return c>=55}
+function policeOn(t){const c=t%CYC;return c>=50}
+function rateAt(t){let r=[1.1,3.0,2.6,1.6][phaseAt(t)];
+ if(mode==='am')r*=1.25; if(mode==='nt')r*=(phaseAt(t)>=1?1.15:0.8);return r}
+function compAt(t){const p=phaseAt(t);
+ if(mode==='nt')return{pri:.3,ride:.46,tax:.15,inn:.09};
+ if(mode==='am')return{pri:.62,ride:.18,tax:.1,inn:.1};
+ return[{pri:.55,ride:.25,tax:.12,inn:.08},{pri:.38,ride:.42,tax:.12,inn:.08},{pri:.4,ride:.4,tax:.12,inn:.08},{pri:.5,ride:.3,tax:.12,inn:.08}][p]}
+function qTarget(t){const c=t%CYC,s=c>=55;
+ if(c<20)return{hj:60,gj:90,dk:80};
+ if(c<45)return{hj:150,gj:250,dk:230};
+ if(c<70)return s?{hj:160,gj:310,dk:270}:{hj:230,gj:350,dk:310};
+ return{hj:70,gj:100,dk:90}}
+const LV=[{n:'蓝',c:'#3aa0ff'},{n:'黄',c:'#ffd43b'},{n:'橙',c:'#ff922b'},{n:'红',c:'#ff4d4f'}];
+function lvlOf(q){return q<100?0:q<180?1:q<260?2:3}
+/* ============ 车辆生成 ============ */
+function destOf(t,strat){const r=Math.random();
+ if(t==='inn')return'nei';
+ if(t==='tax')return r<.5?'taxi':r<.78?'gaojia':'diku';
+ if(t==='ride')return r<.45?'diku':r<.8?'gaojia':'wangyue';
+ if(t==='pri'){if(r<.55)return(strat&&Math.random()<.45)?'rao':'gaojia';if(r<.9)return'diku';return'wangyue'}
+ return'gaojia'}
+function spawn(){const comp=compAt(simT),r=Math.random();
+ let t=r<comp.pri?'pri':r<comp.pri+comp.ride?'ride':r<comp.pri+comp.ride+comp.tax?'tax':'inn';
+ const dk=destOf(t,stratOn(simT));
+ vehicles.push({rk:dk,route:ROUTES[dk],s:rnd(0,6),sp:rnd(52,72),type:t,plate:mkPlate(t),dest:dk,conf:ri(70,97)});
+ if(Math.random()<.5)pushFeed(vehicles[vehicles.length-1]);}
+/* ============ DOM：feed / log ============ */
+function pushFeed(v){const el=document.createElement('li'),T=TYPES[v.type];
+ el.innerHTML=`<span class="pl">${v.plate}</span><span class="ty" style="color:${T.c};border-color:${T.c}">${T.n}</span><span class="ds">→ ${DESTN[v.dest]}</span><span class="cf">${v.conf}%</span>`;
+ const f=$('feed');f.prepend(el);while(f.children.length>9)f.lastChild.remove();}
+function pushLog(tag,color,msg){const el=document.createElement('li');
+ const d=new Date();const ts=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
+ el.innerHTML=`<b>${ts}</b><span class="t" style="background:${color}22;color:${color};border:1px solid ${color}">${tag}</span>${msg}`;
+ const l=$('log');l.prepend(el);while(l.children.length>10)l.lastChild.remove();}
+/* ============ 画布初始化 ============ */
+const cvs=$('map'),ctx=cvs.getContext('2d');
+const LW=1280,LH=780,dpr=window.devicePixelRatio||1;
+cvs.width=LW*dpr;cvs.height=LH*dpr;let scale=1;
+function fit(){const w=$('mapWrap'),cw=w.clientWidth,ch=w.clientHeight;scale=Math.min(cw/LW,ch/LH);
+ cvs.style.width=LW*scale+'px';cvs.style.height=LH*scale+'px';
+ cvs.style.left=((cw-LW*scale)/2)+'px';cvs.style.top=((ch-LH*scale)/2)+'px';}
+window.addEventListener('resize',fit);
+const STC=['#17b877','#f5c542','#f0653a','#e03131'];
+function line(x1,y1,x2,y2,c,w){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+function poly(c,w,pts){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.stroke()}
+function roadSeg(pts,lvl){poly('#14304f',11,pts);poly(STC[lvl],4.5,pts)}
+const BLD=[[870,350,130,72,'T4航站楼'],[1224,348,52,70,'T3航站楼'],[1130,556,80,50,'T2航站楼'],[1010,296,120,44,'交通中心(汽车站)'],[726,232,60,26,'P3停车楼'],[640,246,80,36,'网约车停车场'],[600,556,56,28,'出租车T4场'],[372,688,64,30,'出租车T3场'],[590,452,140,34,'工作区·能源/信息/机场集团'],[452,562,64,24,'海关·边境检查站'],[940,482,60,24,'花架停车场']];
+const KK=[[PT.toll,'西大门'],[PT.gj,'高架上口卡口'],[PT.dk,'所有进场车辆卡口·进出地下停车区'],[[861,381],'网约车/大巴卡口'],[[432,706],'出租车卡口'],[[147,194],'内部车辆卡口']];
+const POI=[[1153,314,'IAC'],[1069,362,'A座凯越'],[1069,447,'B座凯越嘉轩'],[1156,362,'空港大厦C座'],[1156,447,'空港大厦D座'],[1176,192,'北贵宾区'],[791,352,'雷迪森酒店'],[810,470,'民航空管局'],[838,338,'人工湖'],[948,578,'南贵宾区'],[1066,252,'大巴停车场'],[1140,252,'旅游车停车场'],[68,352,'云上机场公园'],[198,347,'全季酒店'],[107,140,'应急救援航空队'],[85,208,'长龙总部'],[358,205,'8号道口'],[555,138,'药品物流基地'],[299,159,'厦航货运'],[412,162,'迎宾楼'],[344,396,'VIP馆'],[303,388,'中石化']];
+/* ============ 地图绘制 ============ */
+function tunnel(x,y,l){ctx.fillStyle='#0a1c38';ctx.strokeStyle='#5f8cb4';ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,5,0,7);ctx.fill();ctx.stroke();
+ ctx.fillStyle='#5f8cb4';ctx.font='9px Microsoft YaHei';ctx.textAlign='center';ctx.fillText(l,x,y+17);}
+function vlabel(x,y,t){ctx.save();ctx.translate(x,y);ctx.rotate(-Math.PI/2);ctx.fillStyle='#5f8cb4';ctx.font='11px Microsoft YaHei';ctx.textAlign='center';ctx.fillText(t,0,0);ctx.restore();}
+function draw(){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,LW,LH);
+ ctx.lineWidth=1;for(let x=0;x<LW;x+=64)line(x,0,x,LH,'rgba(0,140,255,.05)',1);
+ for(let y=0;y<LH;y+=64)line(0,y,LW,y,'rgba(0,140,255,.05)',1);
+ const lh=lvlOf(nodes.hj.q),gj=lvlOf(nodes.gj.q),dk=lvlOf(nodes.dk.q);
+ /* 东西干道（依PDF原图布局）：浙航路·环北 / 翔天路 / 空港大道 / 翔越路 / 翔飞路 / 临空路 */
+ roadSeg([[319,220],[1217,220]],0);
+ roadSeg([[348,307],[810,307]],0);
+ roadSeg([[70,417],[761,417]],lh);
+ roadSeg([[761,417],[807,417]],Math.max(lh,gj,dk));
+ roadSeg([[807,417],[807,220]],gj);
+ roadSeg([[807,417],[834,417],[834,545]],dk);
+ roadSeg([[834,545],[1217,545]],dk);
+ roadSeg([[1217,220],[1217,545]],0);
+ roadSeg([[329,518],[834,518]],0);
+ roadSeg([[327,619],[805,619]],0);
+ roadSeg([[350,735],[477,735]],0);
+ /* 南北道路：航谐/绿茵·航安·航港·通航·中心·航景·临湖 */
+ roadSeg([[296,220],[296,735]],0);
+ roadSeg([[431,307],[431,619]],0);
+ roadSeg([[526,307],[526,619]],0);
+ roadSeg([[598,100],[598,619]],0);
+ roadSeg([[658,518],[658,619]],0);
+ roadSeg([[761,220],[761,619]],lh);
+ roadSeg([[861,220],[861,619]],0);
+ /* 高架桥出发层（高架上口匝道·双向线） */
+ const gjPts=[[807,220],[870,270],[1180,270]];
+ poly('#1b3a63',12,gjPts);poly(STC[gj],3,gjPts.map(p=>[p[0],p[1]-2]));poly(STC[gj],3,gjPts.map(p=>[p[0],p[1]+3]));
+ /* 地库匝道 */
+ roadSeg([[788,417],[1070,430]],dk);
+ /* 绕行诱导动画：绿茵路↓翔越路→高架上口↑出发层 */
+ if(stratOn(simT)){ctx.save();ctx.setLineDash([10,16]);ctx.lineDashOffset=-simT*50;
+  poly('rgba(0,212,255,.75)',2,[[296,417],[296,518],[807,518],[807,220],[870,270],[1180,270]]);ctx.restore();}
+ /* 建筑 */
+ ctx.textAlign='center';
+ for(const b of BLD){ctx.fillStyle='rgba(24,52,92,.6)';ctx.strokeStyle='rgba(90,170,255,.45)';ctx.lineWidth=1;
+  ctx.fillRect(b[0],b[1],b[2],b[3]);ctx.strokeRect(b[0],b[1],b[2],b[3]);
+  ctx.fillStyle='#bfe6ff';ctx.font=(b[2]<70?'10px':'12px')+' Microsoft YaHei';
+  if(b[2]<70&&b[4].length>5){ctx.save();ctx.translate(b[0]+b[2]/2,b[1]+b[3]/2);ctx.rotate(-Math.PI/2);ctx.fillText(b[4],0,4);ctx.restore();}
+  else ctx.fillText(b[4],b[0]+b[2]/2,b[1]+b[3]/2+4);}
+ /* POI 文字 */
+ ctx.fillStyle='#5f8cb4';ctx.font='9px Microsoft YaHei';
+ for(const p of POI)ctx.fillText(p[2],p[0],p[1]);
+ /* 路名标注 */
+ ctx.fillStyle='#8ec9ff';ctx.font='11px Microsoft YaHei';ctx.fillText('T3/T4 高架桥出发层',1000,262);
+ ctx.fillStyle='#5f8cb4';
+ ctx.fillText('空港大道（1号）',240,407);ctx.fillText('空港大道',950,537);
+ ctx.fillText('翔越路（3号·绕行诱导）',430,510);ctx.fillText('翔飞路（5号）',430,611);
+ ctx.fillText('浙航路（13号）',430,212);ctx.fillText('翔天路（11号）',430,299);ctx.fillText('临空路（9号）',410,750);
+ vlabel(288,255,'航谐路');vlabel(288,560,'绿茵路');vlabel(423,460,'航安路');vlabel(518,460,'航港路');
+ vlabel(590,255,'通航路');vlabel(650,565,'中心路');vlabel(753,470,'航景路');vlabel(853,470,'临湖路');
+ ctx.fillText('西大门',70,442);
+ tunnel(559,220,'浙航路隧道');tunnel(559,417,'空港隧道');tunnel(559,518,'翔越路隧道');
+ ctx.fillStyle='#5f8cb4';ctx.font='10px Microsoft YaHei';ctx.fillText('西大门→高架上口 2.5km · 3-4min',300,437);
+ /* 可变车道（空港大道—航景路口） */
+ const von=stratOn(simT);
+ ctx.save();ctx.setLineDash([8,8]);const vc=von?'#35e08f':'rgba(0,212,255,.5)';
+ for(const dy of[-3,3])line(700,417+dy,758,417+dy,vc,1.4);ctx.restore();
+ ctx.font='10px Microsoft YaHei';ctx.fillStyle=von?'#a9f5cd':'#5f8cb4';
+ ctx.fillText(von?'▦ 可变车道 · 专左→直行':'▦ 可变车道 · 常态',729,400);
+ /* 卡口 */
+ for(const k of KK){ctx.fillStyle='#0a1c38';ctx.strokeStyle='#3aa0ff';ctx.lineWidth=1.5;
+  ctx.strokeRect(k[0][0]-6,k[0][1]-6,12,12);ctx.fillStyle='#3aa0ff';ctx.fillRect(k[0][0]-2,k[0][1]-2,4,4);
+  ctx.fillStyle='#8ec9ff';ctx.font='10px Microsoft YaHei';ctx.fillText(k[1],k[0][0],k[0][1]+24);}
+ /* 信号灯（空港大道—航景路路口） */
+ const cycSec=stratOn(simT)?18:14,phz=(simT%cycSec)/cycSec;
+ const sc=phz<.55?'#35e08f':phz<.7?'#ffd43b':'#ff4d4f';
+ ctx.beginPath();ctx.arc(761,401,5,0,7);ctx.fillStyle=sc;ctx.shadowColor=sc;ctx.shadowBlur=9;ctx.fill();ctx.shadowBlur=0;
+ /* 预警脉冲圈 */
+ for(const k of['hj','gj','dk']){const p=NODE_POS[k],lv=lvlOf(nodes[k].q),c=LV[lv].c;
+  const r=12+4*Math.sin(simT*3+nodes[k].q*.1)+lv*3;
+  ctx.beginPath();ctx.arc(p[0],p[1],r,0,7);ctx.strokeStyle=c;ctx.globalAlpha=.55;ctx.lineWidth=2;ctx.stroke();ctx.globalAlpha=1;
+  ctx.beginPath();ctx.arc(p[0],p[1],4,0,7);ctx.fillStyle=c;ctx.fill();}
+ /* 警力 */
+ if(policeOn(simT))for(const p of[PT.hj,PT.gj]){ctx.beginPath();ctx.arc(p[0]+16,p[1]-16,8,0,7);
+  ctx.fillStyle='#144a86';ctx.fill();ctx.strokeStyle='#00d4ff';ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='9px Microsoft YaHei';ctx.fillText('警',p[0]+16,p[1]-13);}
+ /* 车辆 */
+ for(const v of vehicles){const p=routePos(v.route,v.s);v.px=p.x;v.py=p.y;
+  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.ang);ctx.fillStyle=TYPES[v.type].c;
+  ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=5;ctx.fillRect(-4.5,-2.2,9,4.4);ctx.restore();}
+}
+/* ============ 流量曲线 ============ */
+const chCvs=$('chart'),cctx=chCvs.getContext('2d');
+let actHist=Array.from({length:31},()=>clamp(realHourly()+rnd(-350,350),0,9800));
+function drawChart(){const w=chCvs.clientWidth,h=chCvs.clientHeight;
+ if(chCvs.width!==w*dpr){chCvs.width=w*dpr;chCvs.height=h*dpr}
+ cctx.setTransform(dpr,0,0,dpr,0,0);cctx.clearRect(0,0,w,h);
+ const pL=36,pB=16,pT=8,maxY=10000,X=i=>pL+(w-pL-10)*i/60,Y=v=>pT+(h-pT-pB)*(1-v/maxY);
+ cctx.strokeStyle='rgba(0,140,255,.14)';cctx.fillStyle='#5f8cb4';cctx.font='9px Consolas';cctx.textAlign='right';
+ for(let i=0;i<=4;i++){const y=pT+(h-pT-pB)*i/4;cctx.beginPath();cctx.moveTo(pL,y);cctx.lineTo(w-8,y);cctx.stroke();cctx.fillText(String(maxY-maxY*i/4),pL-4,y+3);}
+ cctx.textAlign='center';cctx.fillText('-30min',pL,h-4);cctx.fillText('现在',X(30),h-4);cctx.fillText('+30min',X(60),h-4);
+ cctx.save();cctx.strokeStyle='#35e08f';cctx.lineWidth=1.8;cctx.shadowColor='#35e08f';cctx.shadowBlur=6;cctx.beginPath();
+ actHist.forEach((v,i)=>{i?cctx.lineTo(X(30-actHist.length+1+i),Y(v)):cctx.moveTo(X(30-actHist.length+1+i),Y(v))});cctx.stroke();cctx.restore();
+ cctx.save();cctx.strokeStyle='#00d4ff';cctx.lineWidth=1.8;cctx.setLineDash([6,5]);cctx.shadowColor='#00d4ff';cctx.shadowBlur=6;cctx.beginPath();
+ for(let m=0;m<=30;m++){const v=clamp(realHourly()*[1,1.1,1.25,1.15,1.05,1][Math.min(5,Math.floor(m/6))]+Math.sin(m*.7)*250,0,9800);m?cctx.lineTo(X(30+m),Y(v)):cctx.moveTo(X(30+m),Y(v))}
+ cctx.stroke();cctx.restore();
+ cctx.strokeStyle='rgba(255,255,255,.35)';cctx.setLineDash([3,4]);cctx.beginPath();cctx.moveTo(X(30),pT);cctx.lineTo(X(30),h-pB);cctx.stroke();cctx.setLineDash([]);
+ cctx.textAlign='left';cctx.fillStyle='#35e08f';cctx.fillText('— 实际流量',pL+6,pT+9);cctx.fillStyle='#00d4ff';cctx.fillText('--- 预测流量(辆/时)',pL+70,pT+9);}
+/* ============ 面板刷新 ============ */
+function updUI(){const ph=phaseAt(simT),st=stratOn(simT);
+ const nowD=new Date(),frac=dayFrac(nowD),tot=Math.round(DAILY_VEH*frac+liveExtra);
+ $('stTotal').textContent=tot.toLocaleString();
+ $('stPax').textContent=Math.round(DAILY_PAX*frac).toLocaleString();
+ $('cPri').textContent=Math.round(tot*COMP.pri).toLocaleString();$('cRide').textContent=Math.round(tot*COMP.ride).toLocaleString();
+ $('cTax').textContent=Math.round(tot*COMP.tax).toLocaleString();$('cIn').textContent=Math.round(tot*COMP.inn).toLocaleString();
+ $('donut').style.background='conic-gradient(#35e08f 0 69.7%,#ffb340 0 91%,#ffd75e 0 93.6%,#38bdf8 0 100%)';
+ $('dRate').textContent=realHourly().toLocaleString();
+ const set=(id,q)=>{const lv=lvlOf(q);$(id.replace('q','w')).textContent=LV[lv].n;
+  $(id.replace('q','w')).style.cssText=`background:${LV[lv].c}22;color:${LV[lv].c};border:1px solid ${LV[lv].c}`;
+  $(id).textContent=Math.round(q)+'m';};
+ set('qHj',nodes.hj.q);set('qGj',nodes.gj.q);set('qDk',nodes.dk.q);
+ const mx=Math.max(lvlOf(nodes.hj.q),lvlOf(nodes.gj.q),lvlOf(nodes.dk.q));
+ const chip=$('lvlChip');chip.textContent='总体预警 · '+LV[mx].n;
+ chip.style.cssText=`background:${LV[mx].c}22;color:${LV[mx].c};border:1px solid ${LV[mx].c};padding:4px 14px;border-radius:3px;font-size:13px;font-weight:700;letter-spacing:2px`;
+ const bn=$('banner');
+ if(mx>=2){const wk=nodes.gj.q>=nodes.dk.q&&nodes.gj.q>=nodes.hj.q?['高架桥出发层入口',nodes.gj.q]:nodes.dk.q>=nodes.hj.q?['交通中心地库入口',nodes.dk.q]:['空港大道—航景路路口',nodes.hj.q];
+  bn.style.display='block';bn.style.background=LV[mx].c+'26';bn.style.color=LV[mx].c;bn.style.border='1px solid '+LV[mx].c;
+  bn.textContent=`${LV[mx].n}色预警 · ${wk[0]}排队 ${Math.round(wk[1])}m · ${st?'管控方案执行中':'研判启动中'}`;}
+ else bn.style.display='none';
+ $('l30').textContent=['车流平稳 · 无航班叠加 · 预警蓝色','进港航班波叠加 · 折算旅客>2000 · 修正系数1.3',st?'双高峰叠加 · 预案已预置 · 警力部署中':'进港航班波到达 · 双高峰叠加 · 预警升级','趋势回落 · 预警降级 · 恢复常态配时'][ph];
+ const dev=ph===0?rnd(4,9):st?rnd(8,12):rnd(12,24);
+ $('l15').textContent=dev<=10?`偏差率 ${dev.toFixed(0)}% ≤10% · 继续执行原方案`:`偏差率 ${dev.toFixed(0)}% · 自动修正剩余时段 +15%`;
+ $('l5').textContent=`预计5min到达 ${Math.round(realHourly()/12)} 辆 · 车道级配时就绪 · 置信度 ${ri(74,93)}%`;
+ $('cyc').textContent=st?180:140;$('grn').textContent=(st?58:45)+'%';$('greenBar').style.width=(st?58:45)+'%';
+ $('tgLane').classList.toggle('on',st);$('tgDet').classList.toggle('on',st);
+ $('tgPol').classList.toggle('on',policeOn(simT));$('tgGar').classList.toggle('on',st);
+ const onSet=new Set([1,2,3]);
+ if(ph===1)onSet.add(4);
+ if(ph===2){onSet.add(4);onSet.add(5);if(st){onSet.add(6);onSet.add(7)}}
+ if(ph===3)onSet.add(8);
+ for(let i=1;i<=8;i++)$('s'+i).classList.toggle('on',onSet.has(i));
+ const sec=Math.round(200+nodes.gj.q*.5);
+ $('k1').textContent=Math.floor(sec/60)+"'"+String(sec%60).padStart(2,'0')+'"';
+ $('k2').textContent=Math.round(nodes.hj.q);$('k3').textContent=Math.round(nodes.gj.q);
+ $('k4').textContent='+'+(st?18:12);$('k5').textContent=st?ri(20,25):ph>=1?ri(6,10):0;}
+/* ============ 主循环 ============ */
+let last=performance.now(),accUI=1,accFlow=0,accAmb=3,prevPhase=-1,prevStrat=false,prevPolice=false;
+function loop(now){const dt=Math.min(.06,(now-last)/1000);last=now;simT+=dt;liveExtra+=realHourly()/3600*dt;
+ spawnAcc+=rateAt(simT)*dt;while(spawnAcc>=1){spawnAcc--;spawn()}
+ for(let i=vehicles.length-1;i>=0;i--){const v=vehicles[i],p=routePos(v.route,v.s);let f=1;
+  const nd=ROUTE_NODE[v.rk];
+  if(nd){const np=NODE_POS[nd];if(Math.hypot(p.x-np[0],p.y-np[1])<150)f=Math.max(.16,1-nodes[nd].q/430)}
+  v.s+=v.sp*f*dt;if(v.s>=v.route.tot)vehicles.splice(i,1)}
+ if(vehicles.length>170)vehicles.splice(0,vehicles.length-170);
+ accUI+=dt;if(accUI>=.5){accUI=0;const tg=qTarget(simT);
+  for(const k in nodes)nodes[k].q=clamp(nodes[k].q+(tg[k]-nodes[k].q)*.12+rnd(-5,5),20,400);updUI()}
+ accFlow+=dt;if(accFlow>=2){accFlow=0;actHist.push(clamp(realHourly()+rnd(-350,350),0,9800));if(actHist.length>31)actHist.shift()}
+ accAmb+=dt;if(accAmb>8){accAmb=0;pushLog('感知','#3aa0ff',pick(['边缘计算单元：雷达/视频结构化正常 · 识别准确率98.6%','卡口过车匹配车辆库 · 0.5s完成身份分类','数据质量看板：设备在线率 99.2%','航班动态同步：未来30min进港12架次']))}
+ const ph=phaseAt(simT),st=stratOn(simT),po=policeOn(simT);
+ if(ph===1&&prevPhase===0)pushLog('预警','#ffd43b','黄色预警：进港航班波叠加，高架桥出发层入口排队上升');
+ if(ph===2&&prevPhase===1)pushLog('预警','#ff922b','橙色预警：地库入口排队>260m · 网约车瞬时涌入');
+ if(st&&!prevStrat){pushLog('策略','#00d4ff','可变车道启用：专左→直行 · 周期140s→180s · 绿信比45%→58%');
+  pushLog('下发','#35e08f','配时方案#A7下发信号控制器(4.2s) · 导航推送翔越路绕行≈20%');
+  pushLog('警力','#3aa0ff','警力提前部署：航景路口 / 高架上口点位到位')}
+ if(ph===3&&prevPhase===2)pushLog('评估','#35e08f','航景路排队↓50% · 上桥口↓40% · 未溢出主线 · 方案有效，反馈调优');
+ if(ph===0&&prevPhase===3)pushLog('感知','#3aa0ff','态势恢复常态 · 切换固定配时兜底 · 系统持续监测');
+ prevPhase=ph;prevStrat=st;prevPolice=po;
+ draw();drawChart();requestAnimationFrame(loop)}
+/* ============ 交互 ============ */
+cvs.addEventListener('mousemove',e=>{const r=cvs.getBoundingClientRect();
+ const x=(e.clientX-r.left)/scale,y=(e.clientY-r.top)/scale;
+ let best=null,bd=200;for(const v of vehicles){if(v.px==null)continue;const d=(v.px-x)**2+(v.py-y)**2;if(d<bd){bd=d;best=v}}
+ const tip=$('tip');
+ if(best){tip.style.display='block';tip.style.left=(cvs.offsetLeft+best.px*scale+14)+'px';tip.style.top=(cvs.offsetTop+best.py*scale-12)+'px';
+  tip.innerHTML=`<b>${best.plate}</b> · ${TYPES[best.type].n}<br>预判目的地：${DESTN[best.dest]}<br>置信度 ${best.conf}% · 车速 ${(best.sp*.62).toFixed(0)} km/h`;}
+ else tip.style.display='none';});
+cvs.addEventListener('mouseleave',()=>$('tip').style.display='none');
+function setMode(m,btn){mode=m;document.querySelectorAll('.mbtns button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+ pushLog('模式','#00d4ff','演示场景切换：'+btn.textContent);}
+$('mAuto').onclick=e=>setMode('auto',e.target);
+$('mAm').onclick=e=>setMode('am',e.target);
+$('mNt').onclick=e=>setMode('nt',e.target);
+setInterval(()=>{const d=new Date();$('clock').textContent=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');},1000);
+/* ============ 启动 ============ */
+fit();
+for(let i=0;i<46;i++){spawn();vehicles[vehicles.length-1].s=rnd(10,vehicles[vehicles.length-1].route.tot-20);}
+pushLog('感知','#3aa0ff','系统启动：感知—预判—决策—执行—评估 闭环运行');
+pushLog('身份','#38bdf8','车辆身份预判引擎就绪 · 三类车辆库加载完成');
+updUI();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
