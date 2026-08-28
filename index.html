@@ -201,13 +201,13 @@ header .sp{flex:1}
     </div>
     <div class="panel">
       <h3>关键节点拥堵预警<span class="en">4-LEVEL</span></h3>
-      <div class="node"><span class="nm">空港大道—航景路路口</span><span class="q" id="qHj">40m</span><span class="chip" id="wHj">蓝</span></div>
+      <div class="node"><span class="nm">空港大道—匝道分岔口</span><span class="q" id="qHj">40m</span><span class="chip" id="wHj">蓝</span></div>
       <div class="node"><span class="nm">高架桥出发层入口</span><span class="q" id="qGj">60m</span><span class="chip" id="wGj">蓝</span></div>
       <div class="node"><span class="nm">交通中心地库入口</span><span class="q" id="qDk">50m</span><span class="chip" id="wDk">蓝</span></div>
     </div>
     <div class="panel">
       <h3>信号配时 · 管控策略<span class="en">SIGNAL PLAN</span></h3>
-      <div class="sigrow">航景路口周期 <b id="cyc">140</b>s &nbsp; 东西绿信比</div>
+      <div class="sigrow">主线分岔口周期 <b id="cyc">140</b>s &nbsp; 东西绿信比</div>
       <div class="sigrow"><div class="bar"><i id="greenBar"></i></div><b id="grn">45%</b></div>
       <div id="strats">
         <s id="tgLane">可变车道切换</s><s id="tgDet">诱导绕行·翔越路</s>
@@ -231,7 +231,7 @@ header .sp{flex:1}
     <h3>运行成效指标<span class="en">KPI</span></h3>
     <div id="kpis">
       <div class="kpi"><em>主干道平均通行时间</em><b id="k1">3'42"</b> <small class="up">↓15%</small></div>
-      <div class="kpi"><em>航景路口排队长度</em><b id="k2">40</b><small>m</small> <small class="up" id="k2t">↓50%</small></div>
+      <div class="kpi"><em>分岔口排队长度</em><b id="k2">40</b><small>m</small> <small class="up" id="k2t">↓50%</small></div>
       <div class="kpi"><em>上桥口排队长度</em><b id="k3">60</b><small>m</small> <small class="up" id="k3t">↓40%</small></div>
       <div class="kpi"><em>关键交叉口通行能力</em><b id="k4">+15</b><small>%</small></div>
       <div class="kpi"><em>绕行翔越路比例</em><b id="k5">0</b><small>%</small></div>
@@ -250,22 +250,26 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 /* ============ 底图叠加几何（PDF原图深色底图对齐 · 画布1280x780） ============ */
 const BASE=new Image();BASE.src='basemap.jpg'; /* PDF原图渲染·反色深色底图 */
-const PT={toll:[130,373],hj:[751,373],gj:[850,179],dk:[762,370]};
+/* 流线关键节点（像素级标定底图）：p1=空港大道匝道分岔口(杭港高速东) gj=航景路口·高架西端 dk=交通中心停车场入口 */
+const PT={toll:[130,306],p1:[620,306],hj:[620,306],gj:[779,150],dk:[1000,306]};
 function mkRoute(pts){let segs=[],tot=0;for(let i=0;i<pts.length-1;i++){const L=Math.hypot(pts[i+1][0]-pts[i][0],pts[i+1][1]-pts[i][1]);segs.push({a:pts[i],b:pts[i+1],L,st:tot});tot+=L}return{segs,tot}}
 function routePos(r,s){s=clamp(s,0,r.tot-0.001);for(let i=r.segs.length-1;i>=0;i--){const g=r.segs[i];if(s>=g.st){const t=(s-g.st)/g.L;return{x:g.a[0]+(g.b[0]-g.a[0])*t,y:g.a[1]+(g.b[1]-g.a[1])*t,ang:Math.atan2(g.b[1]-g.a[1],g.b[0]-g.a[0])}}}return{x:r.segs[0].a[0],y:r.segs[0].a[1],ang:0}}
+/* 五种现场流线：经空港大道/翔越路 上下T3/T4高架（含高架斜线匝道·偏离地面道路段）+ 停车场 + 场区 */
 const ROUTES={
- gaojia:mkRoute([PT.toll,PT.hj,[751,179],PT.gj,[1000,179],[1180,179]]),
- rao:mkRoute([PT.toll,[290,373],[290,456],[751,456],[751,179],PT.gj,[1000,179],[1180,179]]),
- diku:mkRoute([PT.toll,PT.hj,PT.dk,[995,373],[995,300],[1047,295]]),
- wangyue:mkRoute([PT.toll,[596,373],[596,243],[674,243]]),
- taxi:mkRoute([PT.toll,[290,373],[290,630],[415,630]]),
- nei:mkRoute([PT.toll,[596,373],[596,416],[627,416]])
+ gjT3a:mkRoute([PT.toll,PT.p1,[779,415],[1250,415],[1250,150],PT.gj,PT.p1,[130,306]]),   /* 空港大道↕T3高架：斜线匝道↓南环→东竖↑北高架→斜线匝道↓回主线 */
+ gjT4b:mkRoute([PT.toll,PT.p1,[779,415],[779,150],PT.p1,[130,306]]),                     /* 空港大道↕T4高架：斜线匝道↓南环西端→14号路匝道↑高架西口→斜线↓回主线 */
+ gjT4a:mkRoute([PT.toll,[443,306],[443,385],[779,385],[779,150],PT.p1,[130,306]]),       /* 翔越路↕T4高架：航安路↓翔越路→14号路匝道↑ */
+ gjT3b:mkRoute([PT.toll,[443,306],[443,385],[779,385],[779,415],[1250,415],[1250,150],PT.gj,PT.p1,[130,306]]), /* 翔越路↕T3高架 */
+ diku:mkRoute([PT.toll,PT.p1,PT.dk]),                                                    /* 交通中心停车场：主线直进 */
+ wangyue:mkRoute([PT.toll,[610,306],[610,210],[674,210]]),
+ taxi:mkRoute([PT.toll,[300,306],[300,515],[400,515]]),
+ nei:mkRoute([PT.toll,[443,306],[443,463],[500,463]])
 };
 const NODE_POS={hj:PT.hj,gj:PT.gj,dk:PT.dk};
-const ROUTE_NODE={gaojia:'gj',rao:'gj',diku:'dk',wangyue:null,taxi:null,nei:null};
+const ROUTE_NODE={gjT3a:'gj',gjT3b:'gj',gjT4a:'gj',gjT4b:'gj',diku:'dk',wangyue:null,taxi:null,nei:null};
 /* ============ 车辆类型 ============ */
 const TYPES={pri:{c:'#35e08f',n:'社会私家车'},ride:{c:'#ffb340',n:'网约车'},tax:{c:'#ffd75e',n:'出租车'},inn:{c:'#38bdf8',n:'内部固定'}};
-const DESTN={gaojia:'T3/T4高架出发层',rao:'翔越路绕行→出发层',diku:'交通中心地下车库',wangyue:'网约车停车场',taxi:'出租车T3蓄车场',nei:'工作区(办公/货运)'};
+const DESTN={gjT3a:'T3高架·空港大道环线',gjT4b:'T4高架·空港大道环线',gjT4a:'T4高架·翔越路',gjT3b:'T3高架·翔越路',diku:'交通中心停车场',wangyue:'网约车停车场',taxi:'出租车T3蓄车场',nei:'工作区(办公/货运)'};
 function mkPlate(t){const c='ABCDEFGHJKLMNPQRSTUVWXYZ',d='0123456789';
  if(t==='ride')return '浙A·D'+Array.from({length:5},()=>pick(d)).join('');
  if(t==='tax')return '浙A·T'+ri(100,999);
@@ -302,10 +306,10 @@ function lvlOf(q){return q<100?0:q<180?1:q<260?2:3}
 /* ============ 车辆生成 ============ */
 function destOf(t,strat){const r=Math.random();
  if(t==='inn')return'nei';
- if(t==='tax')return r<.5?'taxi':r<.78?'gaojia':'diku';
- if(t==='ride')return r<.45?'diku':r<.8?'gaojia':'wangyue';
- if(t==='pri'){if(r<.55)return(strat&&Math.random()<.45)?'rao':'gaojia';if(r<.9)return'diku';return'wangyue'}
- return'gaojia'}
+ if(t==='tax')return r<.5?'taxi':r<.8?'gjT3a':'diku';
+ if(t==='ride')return r<.45?'diku':r<.8?'gjT4a':'wangyue';
+ if(t==='pri'){if(r<.55)return strat?(Math.random()<.5?'gjT3b':'gjT4a'):(Math.random()<.5?'gjT3a':'gjT4b');if(r<.9)return'diku';return'wangyue'}
+ return'gjT3a'}
 function spawn(){const comp=compAt(simT),r=Math.random();
  let t=r<comp.pri?'pri':r<comp.pri+comp.ride?'ride':r<comp.pri+comp.ride+comp.tax?'tax':'inn';
  const dk=destOf(t,stratOn(simT));
@@ -331,7 +335,7 @@ const STC=['#17b877','#f5c542','#f0653a','#e03131'];
 function line(x1,y1,x2,y2,c,w){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
 function poly(c,w,pts){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.stroke()}
 /* 公安卡口（叠加于底图红×标记处） */
-const KK=[[PT.toll,'西大门'],[PT.gj,'高架上口卡口'],[PT.dk,'所有进场车辆卡口·进出地下停车区'],[[674,243],'网约车/大巴卡口'],[[523,552],'出租车卡口'],[[88,179],'内部车辆卡口']];
+const KK=[[PT.toll,'西大门'],[PT.gj,'高架上口卡口'],[PT.dk,'所有进场车辆卡口·进出地下停车区'],[[674,210],'网约车/大巴卡口'],[[523,470],'出租车卡口'],[[88,150],'内部车辆卡口']];
 /* ============ 地图绘制（PDF原图底图 + 动态叠加层） ============ */
 function glow(pts,lvl){ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
  ctx.strokeStyle=STC[lvl];ctx.globalAlpha=.4;ctx.lineWidth=7;ctx.shadowColor=STC[lvl];ctx.shadowBlur=9;
@@ -340,33 +344,34 @@ function draw(){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,LW,LH);
  /* 底图：PDF原图（Windows.Data.Pdf渲染·反色深色化） */
  if(BASE.complete&&BASE.naturalWidth)ctx.drawImage(BASE,0,0,LW,LH);
  const lh=lvlOf(nodes.hj.q),gj=lvlOf(nodes.gj.q),dk=lvlOf(nodes.dk.q);
- /* 实时拥堵着色（贴合底图道路） */
- glow([[130,373],[751,373]],lh);                       /* 空港大道主线 */
- glow([[751,373],[751,179],[850,179]],gj);             /* 航景路↑高架上口匝道 */
- glow([[850,179],[1000,179],[1180,179]],gj);           /* T3/T4高架桥出发层 */
- glow([[762,370],[995,373],[995,300],[1047,295]],dk);  /* 地库匝道→交通中心 */
- /* 绕行诱导动画：绿茵路↓翔越路→航景路↑出发层 */
+ /* 实时拥堵着色（贴合现场流线：空港大道主线/南环/东竖/北高架/14号路匝道/翔越路进场） */
+ glow([[130,306],[620,306]],lh);                       /* 空港大道主线（西大门→分岔口） */
+ glow([[620,306],[1000,306]],dk);                      /* 主线东段→交通中心停车场 */
+ glow([[620,306],[779,415],[1250,415],[1250,150],[779,150]],gj); /* T3高架环线（斜线匝道→南环→东竖→北高架→下坡匝道） */
+ glow([[779,415],[779,150]],gj);                       /* T4高架（14号路匝道↑→高架西口） */
+ glow([[443,306],[443,385],[779,385]],lh);             /* 翔越路进场（航安路↓→翔越路→） */
+ /* 绕行诱导动画：航安路↓翔越路→14号路匝道↑高架 */
  if(stratOn(simT)){ctx.save();ctx.setLineDash([10,16]);ctx.lineDashOffset=-simT*50;
-  poly('rgba(0,212,255,.75)',2,[[290,373],[290,456],[751,456],[751,179],[850,179],[1180,179]]);ctx.restore();}
+  poly('rgba(0,212,255,.75)',2,[[443,306],[443,385],[779,385],[779,150]]);ctx.restore();}
  /* 导航平台修正标注 */
  ctx.textAlign='center';ctx.fillStyle='#ffd75e';ctx.font='10px Microsoft YaHei';
- ctx.fillText('机场1号路（导航实际名·航站楼南环）',1114,494);
- ctx.save();ctx.translate(1216,320);ctx.rotate(Math.PI/2);ctx.fillText('环东1号路（导航实际名）',0,0);ctx.restore();
+ ctx.fillText('机场1号路（导航实际名·航站楼南环）',1010,432);
+ ctx.save();ctx.translate(1266,300);ctx.rotate(Math.PI/2);ctx.fillText('环东1号路（导航实际名）',0,0);ctx.restore();
  ctx.fillStyle='#7fb3dc';ctx.fillText('真北偏东北23° · 与导航平台方位一致',1105,730);
- /* 可变车道（空港大道—航景路口西侧） */
+ /* 可变车道（空港大道分岔口西侧） */
  const von=stratOn(simT);
  ctx.save();ctx.setLineDash([8,8]);const vc=von?'#35e08f':'rgba(0,212,255,.5)';
- for(const dy of[-4,4])line(690,373+dy,748,373+dy,vc,1.4);ctx.restore();
+ for(const dy of[-4,4])line(560,306+dy,614,306+dy,vc,1.4);ctx.restore();
  ctx.font='10px Microsoft YaHei';ctx.fillStyle=von?'#a9f5cd':'#8ec9ff';
- ctx.fillText(von?'▦ 可变车道 · 专左→直行':'▦ 可变车道 · 常态',719,356);
+ ctx.fillText(von?'▦ 可变车道 · 专左→直行':'▦ 可变车道 · 常态',587,289);
  /* 卡口 */
  for(const k of KK){ctx.fillStyle='#0a1c38';ctx.strokeStyle='#3aa0ff';ctx.lineWidth=1.5;
   ctx.strokeRect(k[0][0]-6,k[0][1]-6,12,12);ctx.fillStyle='#3aa0ff';ctx.fillRect(k[0][0]-2,k[0][1]-2,4,4);
   ctx.fillStyle='#8ec9ff';ctx.font='10px Microsoft YaHei';ctx.fillText(k[1],k[0][0],k[0][1]+24);}
- /* 信号灯（空港大道—航景路路口） */
+ /* 信号灯（空港大道分岔口） */
  const cycSec=stratOn(simT)?18:14,phz=(simT%cycSec)/cycSec;
  const sc=phz<.55?'#35e08f':phz<.7?'#ffd43b':'#ff4d4f';
- ctx.beginPath();ctx.arc(751,360,5,0,7);ctx.fillStyle=sc;ctx.shadowColor=sc;ctx.shadowBlur=9;ctx.fill();ctx.shadowBlur=0;
+ ctx.beginPath();ctx.arc(620,293,5,0,7);ctx.fillStyle=sc;ctx.shadowColor=sc;ctx.shadowBlur=9;ctx.fill();ctx.shadowBlur=0;
  /* 预警脉冲圈 */
  for(const k of['hj','gj','dk']){const p=NODE_POS[k],lv=lvlOf(nodes[k].q),c=LV[lv].c;
   const r=12+4*Math.sin(simT*3+nodes[k].q*.1)+lv*3;
