@@ -636,7 +636,7 @@ let editOn=false,editKey='gjT3a',dragI=-1,dragK=-1;
 const ORIG_PTS={};for(const k in ROUTES)ORIG_PTS[k]=ROUTES[k].pts.map(p=>[p[0],p[1]]);
 function setRoutePts(k,pts){const r=mkRoute(pts);ROUTES[k].segs=r.segs;ROUTES[k].tot=r.tot;ROUTES[k].pts=r.pts;}
 let RULES={};const CUSTOM={}; /* RULES=车流配置 车型->[[流线键,权重],...]；CUSTOM=自定义流线登记 */
-function saveEdit(label){const o={pts:{},custom:{},rules:RULES,kk:KK};
+function saveEdit(label){const o={pts:{},custom:{},rules:RULES,kk:KK,ts:Date.now()};
  for(const k in ROUTES){if(CUSTOM[k])o.custom[k]={n:DESTN[k],p:ROUTES[k].pts};else o.pts[k]=ROUTES[k].pts;}
  localStorage.setItem('hlt_edit_v2',JSON.stringify(o));pushHist(label||'编辑自动保存',o);pushCloud();}
 const persistRoutes=saveEdit;
@@ -647,7 +647,8 @@ function applyConfig(o){if(!o)return;
  for(const k in(o.custom||{})){const c=o.custom[k];if(c&&(c.p||[]).length>=2)addCustom(k,c.n||k,c.p);}
  RULES=o.rules||{};
  if(Array.isArray(o.kk)&&o.kk.length)KK=o.kk.filter(e=>Array.isArray(e)&&Array.isArray(e[0])&&e[0].length===2&&typeof e[1]==='string').map(e=>[[+e[0][0],+e[0][1]],e[1]]);}
-try{applyConfig(JSON.parse(localStorage.getItem('hlt_edit_v2')||'null'));
+let LOCAL_CFG=null;
+try{LOCAL_CFG=JSON.parse(localStorage.getItem('hlt_edit_v2')||'null');applyConfig(LOCAL_CFG);
  const old=JSON.parse(localStorage.getItem('hlt_routes_v1')||'null');
  if(old)for(const k in old)if(ROUTES[k]&&old[k].length>=2)setRoutePts(k,old[k]);
 }catch(e){}
@@ -661,8 +662,13 @@ function cloudPut(o){fetch('https://api.github.com/gists/'+GIST_ID,{method:'PATC
 let cloudTimer=0;
 function pushCloud(){clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>cloudPut(JSON.parse(localStorage.getItem('hlt_edit_v2')||'{}')),1200);}
 fetch('https://gist.githubusercontent.com/Woods006194/'+GIST_ID+'/raw/hlt_config.json?ts='+Date.now())
- .then(r=>r.ok?r.json():null).then(o=>{if(o&&typeof o==='object'){applyConfig(o);
-  pushLog('系统','#35e08f','云端配置已同步 · 流线/卡口与最新发布一致');}}).catch(()=>{});
+ .then(r=>r.ok?r.json():null).then(o=>{
+  if(LOCAL_CFG){/* 本地优先：云端不得覆盖本机编辑；本机较新（或云端无时间戳）时回写云端统一 */
+   if(!o||!o.ts||(LOCAL_CFG.ts||0)>=(o.ts||0)){cloudPut(LOCAL_CFG);
+    pushLog('系统','#35e08f','以本机编辑配置为准 · 已回写云端');}
+   return;}
+  if(o&&typeof o==='object'){applyConfig(o);
+   pushLog('系统','#35e08f','云端配置已同步 · 流线/卡口与最新发布一致');}}).catch(()=>{});
 /* ---- 历史版本存档（防误操作覆盖丢失 · 最多30条） ---- */
 const HIST_KEY='hlt_hist_v1';
 function loadHist(){try{return JSON.parse(localStorage.getItem(HIST_KEY)||'[]')||[]}catch(e){return[]}}
