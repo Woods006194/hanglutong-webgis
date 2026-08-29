@@ -35,9 +35,9 @@ header .sp{flex:1}
 #pwdOk{background:rgba(0,190,255,.25);border:1px solid #00d4ff;color:#fff}
 #pwdNo{background:transparent;border:1px solid rgba(150,180,210,.4);color:#7fb3dc}
 #pwdErr{display:block;margin-top:8px;color:#ff4d4f;font-size:11px;min-height:14px}
-#editBar{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:30;display:none;gap:8px;align-items:center;background:rgba(10,28,56,.94);border:1px solid #35e08f;border-radius:4px;padding:6px 12px;font-size:12px;color:#a9f5cd;white-space:nowrap}
+#editBar{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:30;display:none;gap:6px 8px;align-items:center;justify-content:center;flex-wrap:wrap;background:rgba(10,28,56,.94);border:1px solid #35e08f;border-radius:4px;padding:6px 12px;font-size:12px;color:#a9f5cd;max-width:calc(100% - 12px)}
 #editBar select{background:#06122a;border:1px solid rgba(53,224,143,.5);color:#d8ecff;font-size:12px;padding:3px 6px;border-radius:3px;font-family:inherit}
-#editBar em{font-style:normal;color:#7fb3dc;font-size:11px}
+#editBar em{font-style:normal;color:#7fb3dc;font-size:11px;flex:1 1 100%;text-align:center}
 #editBar button{background:rgba(53,224,143,.15);border:1px solid rgba(53,224,143,.5);color:#a9f5cd;padding:3px 10px;border-radius:3px;cursor:pointer;font-family:inherit;font-size:12px}
 #rulesMask{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:99}
 #rulesBox{max-height:52vh;overflow:auto;text-align:left}
@@ -546,6 +546,7 @@ function updUI(){const ph=SF?SF.phase:phaseAt(simT),st=SF?SF.strat:stratOn(simT)
   bn.style.display='block';bn.style.background=LV[mx].c+'26';bn.style.color=LV[mx].c;bn.style.border='1px solid '+LV[mx].c;
   bn.textContent=`${LV[mx].n}色预警 · ${wk[0]}排队 ${Math.round(wk[1])}m · ${st?'管控方案执行中':'研判启动中'}`;}
  else bn.style.display='none';
+ if(editOn&&bn.style.display==='block')bn.style.top=($('editBar').offsetHeight+14)+'px';
  $('l30').textContent=SF?SF.l30:['车流平稳 · 无航班叠加 · 预警蓝色','进港航班波叠加 · 折算旅客>2000 · 修正系数1.3',st?'双高峰叠加 · 预案已预置 · 警力部署中':'进港航班波到达 · 双高峰叠加 · 预警升级','趋势回落 · 预警降级 · 恢复常态配时'][ph];
  const dev=ph===0&&!SF?rnd(4,9):st?rnd(8,12):rnd(12,24);
  $('l15').textContent=SF?SF.l15:dev<=10?`偏差率 ${dev.toFixed(0)}% ≤10% · 继续执行原方案`:`偏差率 ${dev.toFixed(0)}% · 自动修正剩余时段 +15%`;
@@ -652,9 +653,9 @@ function segDist(px,py,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L2=dx*dx+dy*dy||1;le
 function tryPwd(){if($('pwdIn').value===EDIT_PWD){$('pwdMask').style.display='none';enterEdit();}
  else{$('pwdErr').textContent='密码错误，请重新输入';$('pwdIn').value='';$('pwdIn').focus();}}
 function enterEdit(){editOn=true;dragI=-1;$('editBtn').classList.add('act');$('editBtn').textContent='✎ 流线编辑中 · 点击退出';
- $('editBar').style.display='flex';refreshSel();
+ $('editBar').style.display='flex';$('banner').style.top=($('editBar').offsetHeight+14)+'px';refreshSel();
  pushLog('系统','#ffd43b','流线编辑已解锁：拖拽顶点/双击插点/右键删点 · 修改自动保存');}
-function exitEdit(){editOn=false;dragI=-1;$('editBtn').classList.remove('act');$('editBtn').textContent='✎ 编辑流线';$('editBar').style.display='none';}
+function exitEdit(){editOn=false;dragI=-1;$('editBtn').classList.remove('act');$('editBtn').textContent='✎ 编辑流线';$('editBar').style.display='none';$('banner').style.top='';}
 $('editBtn').onclick=()=>{if(editOn){exitEdit();return}$('pwdMask').style.display='flex';$('pwdIn').value='';$('pwdErr').textContent='';setTimeout(()=>$('pwdIn').focus(),60);};
 $('pwdNo').onclick=()=>$('pwdMask').style.display='none';
 $('pwdOk').onclick=tryPwd;
