@@ -464,7 +464,7 @@ function line(x1,y1,x2,y2,c,w){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath()
 function poly(c,w,pts){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.stroke()}
 /* 公安卡口（叠加于底图红×标记处 · 编辑模式可增删/改名/移动） */
 let KK=[[[130,306],'西大门'],[[886,150],'高架上口卡口'],[[1000,306],'所有进场车辆卡口·进出地下停车区'],[[674,210],'网约车/大巴卡口'],[[523,470],'出租车卡口'],[[88,150],'内部车辆卡口']];
-const ORIG_KK=KK.map(k=>[[k[0][0],k[0][1]],k[1]]);
+let ORIG_KK=[];
 /* ============ 地图绘制（PDF原图底图 + 动态叠加层） ============ */
 function glow(pts,lvl){ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
  ctx.strokeStyle=STC[lvl];ctx.globalAlpha=.4;ctx.lineWidth=7;ctx.shadowColor=STC[lvl];ctx.shadowBlur=9;
@@ -488,12 +488,12 @@ function draw(){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,LW,LH);
  ctx.fillText('机场1号路（导航实际名·航站楼南环）',1010,432);
  ctx.save();ctx.translate(1266,300);ctx.rotate(Math.PI/2);ctx.fillText('环东1号路（导航实际名）',0,0);ctx.restore();
  ctx.fillStyle='#7fb3dc';ctx.fillText('真北偏东北23° · 与导航平台方位一致',1105,730);
- /* 可变车道（空港大道分岔口西侧） */
+ /* 可变车道（空港大道×航景路路口） */
  const von=SF?SF.lane:stratOn(simT);
  ctx.save();ctx.setLineDash([8,8]);const vc=von?'#35e08f':'rgba(0,212,255,.5)';
- for(const dy of[-4,4])line(560,306+dy,614,306+dy,vc,1.4);ctx.restore();
+ for(const dy of[-4,4])line(747,306+dy,811,306+dy,vc,1.4);ctx.restore();
  ctx.font='10px Microsoft YaHei';ctx.fillStyle=von?'#a9f5cd':'#8ec9ff';
- ctx.fillText(von?'▦ 可变车道 · 专左→直行':'▦ 可变车道 · 常态',587,289);
+ ctx.fillText(von?'▦ 可变车道 · 专左→直行':'▦ 可变车道 · 常态',779,289);
  /* 卡口 */
  for(const k of KK){ctx.fillStyle='#0a1c38';ctx.strokeStyle='#3aa0ff';ctx.lineWidth=1.5;
   ctx.strokeRect(k[0][0]-6,k[0][1]-6,12,12);ctx.fillStyle='#3aa0ff';ctx.fillRect(k[0][0]-2,k[0][1]-2,4,4);
@@ -633,7 +633,7 @@ $('caseBtn2').onclick=()=>startCase(2);
 /* ============ 流线手动编辑（密码解锁 · localStorage持久化） ============ */
 const EDIT_PWD='jcga12345';
 let editOn=false,editKey='gjT3a',dragI=-1,dragK=-1;
-const ORIG_PTS={};for(const k in ROUTES)ORIG_PTS[k]=ROUTES[k].pts.map(p=>[p[0],p[1]]);
+let ORIG_PTS={};
 function setRoutePts(k,pts){const r=mkRoute(pts);ROUTES[k].segs=r.segs;ROUTES[k].tot=r.tot;ROUTES[k].pts=r.pts;}
 let RULES={};const CUSTOM={}; /* RULES=车流配置 车型->[[流线键,权重],...]；CUSTOM=自定义流线登记 */
 function saveEdit(label){const o={pts:{},custom:{},rules:RULES,kk:KK,ts:Date.now()};
@@ -641,6 +641,17 @@ function saveEdit(label){const o={pts:{},custom:{},rules:RULES,kk:KK,ts:Date.now
  localStorage.setItem('hlt_edit_v2',JSON.stringify(o));pushHist(label||'编辑自动保存',o);pushCloud();}
 const persistRoutes=saveEdit;
 function addCustom(k,name,pts){ROUTES[k]=mkRoute(pts);DESTN[k]=name;ROUTE_NODE[k]=null;CUSTOM[k]=1;}
+/* ============ 默认版本：用户最新完整编辑版（恢复默认/离线/新设备均以此为准） ============ */
+const DEFAULT_CFG={pts:{'gjT3a':[[130,306],[698.404331101897,306.1823171541836],[883.708198505212,388.0607701928576],[1244.6198007151565,392.37016245805097],[1250,150],[886.9402427041069,151.04419560722224],[698.404331101897,306.1823171541836],[130,306]],'gjT4b':[[130,306],[694.0949388367036,307.2596652204819],[886.9402427041069,388.0607701928576],[886,150],[694.0949388367036,306.1823171541836],[130,306]],'gjT4a':[[130,306],[443,306],[443,385],[779,385],[886.9402427041069,385.9060740602609],[886,150],[697.3269830355987,306.1823171541836],[130,306]],'gjT3b':[[130,306],[443,306],[443,385],[779,385],[885.8628946378086,383.75137792766424],[1245.6971487814549,391.29281439175264],[1250,150],[886,150],[697.3269830355987,306.1823171541836],[130,306]],'diku':[[130,306],[783.514828339466,306.1823171541836],[1001.1391377317312,306.1823171541836]],'wangyue':[[130,306],[780.282784140571,306.1823171541836],[779.2054360742727,386.9834221265593],[613.2938338643279,386.9834221265593],[616.525878063223,211.37568731992943],[674.7026736433335,210.29833925363107]],'taxi':[[130,306],[444.15018745548815,306.1823171541836],[443.0728393891898,533.5027591431339]],'nei':[[130,306],[443,306],[443,463],[500,463]]},
+custom:{'cus1':{'n':'出交通中心停车场','p':[[1001.1391377317312,306.1823171541836],[129.56455209637215,306.1823171541836]]},'cus2':{'n':'网约车停车场去交通中心停车场','p':[[675.7800217096318,214.60773151882444],[885.8628946378086,216.76242765142112],[1000.0617896654329,306.1823171541836]]},'cus3':{'n':'出租车T4蓄车场','p':[[130,306],[439.8407951902948,307.2596652204819],[441.9954913228915,383.75137792766424],[672.5479775107368,383.75137792766424],[673.6253255770351,457.0110464359515],[643.4595797206815,452.70165417075816]]},'cus4':{'n':'出租车T3上客','p':[[443.8289837197308,537.7835446312314],[442.7034425941897,383.58441043209723],[885.041104931852,388.0865749342617],[886.1666460573932,305.92207276975955],[998.7207586115057,308.1731550208418]]},'cus5':{'n':'出租车T4上客','p':[[644.1753040660511,452.2424190901059],[782.6168625076097,456.7445835922704],[782.6168625076097,304.7965316442184],[1002.0973819881291,307.0476138953007]]}},
+rules:{'pri':[['gjT3a',25],['gjT4b',25],['diku',35],['gjT4a',5],['gjT3b',5]],'ride':[['gjT3a',20],['gjT4b',20],['gjT4a',5],['gjT3b',5],['wangyue',10],['diku',20],['cus2',20]],'tax':[['gjT3a',20],['gjT4b',20],['gjT4a',5],['gjT3b',5],['taxi',10],['diku',20],['cus3',10]]},
+kk:[[[130,306],'西大门'],[[700.5590272344937,307.2596652204819],'空港大道上高架卡口'],[[1000,306],'交通中心停车场'],[[674,210],'网约车停车场'],[[441.9954913228915,535.6574552757305],'出租车T3蓄车场'],[[884.7855465715103,386.9834221265593],'翔越路上高架卡口'],[[642.3822316543832,451.6243061044598],'出租车T4蓄车场'],[[441.5779014686486,308.1731550208418],'1-6'],[[442.7034425941897,383.58441043209723],'航安路与翔越路路口'],[[779.2402391309862,307.0476138953007],'空港大道与航景路路口']]};
+for(const k in DEFAULT_CFG.pts)if(ROUTES[k])setRoutePts(k,DEFAULT_CFG.pts[k]);
+for(const k in DEFAULT_CFG.custom)addCustom(k,DEFAULT_CFG.custom[k].n,DEFAULT_CFG.custom[k].p);
+RULES=JSON.parse(JSON.stringify(DEFAULT_CFG.rules));
+KK=DEFAULT_CFG.kk.map(e=>[[e[0][0],e[0][1]],e[1]]);
+ORIG_PTS={};for(const k in ROUTES)ORIG_PTS[k]=ROUTES[k].pts.map(p=>[p[0],p[1]]);
+ORIG_KK=KK.map(k=>[[k[0][0],k[0][1]],k[1]]);
 function applyConfig(o){if(!o)return;
  for(const k in CUSTOM)if(!(o.custom||{})[k]){delete ROUTES[k];delete DESTN[k];delete CUSTOM[k];}
  for(const k in(o.pts||{}))if(ROUTES[k]&&(o.pts[k]||[]).length>=2)setRoutePts(k,o.pts[k]);
@@ -703,16 +714,16 @@ function delRoute(){const k=editKey;if(!CUSTOM[k]){pushLog('系统','#ff4d4f','�
  for(const t in RULES)RULES[t]=RULES[t].filter(e=>e[0]!==k);
  vehicles=vehicles.filter(v=>v.rk!==k);
  editKey=Object.keys(ROUTES)[0];saveEdit('删除流线 '+k);refreshSel();pushLog('系统','#ffd43b','已删除自定义流线 '+k);}
-function resetRoutes(){for(const k in CUSTOM){delete ROUTES[k];delete DESTN[k];delete CUSTOM[k];}
- for(const k in ROUTES)if(ORIG_PTS[k])setRoutePts(k,ORIG_PTS[k].map(p=>[p[0],p[1]]));
- KK=ORIG_KK.map(k=>[[k[0][0],k[0][1]],k[1]]);
- RULES={};vehicles=[];
+function resetRoutes(){applyConfig(JSON.parse(JSON.stringify(DEFAULT_CFG)));
+ ORIG_PTS={};for(const k in ROUTES)ORIG_PTS[k]=ROUTES[k].pts.map(p=>[p[0],p[1]]);
+ ORIG_KK=KK.map(k=>[[k[0][0],k[0][1]],k[1]]);
+ vehicles=[];
  pushHist('恢复默认前存档');
- localStorage.removeItem('hlt_edit_v2');localStorage.removeItem('hlt_routes_v1');
- const rz={pts:{},custom:{},rules:{},kk:ORIG_KK.map(k=>[[k[0][0],k[0][1]],k[1]])};
- for(const k in ORIG_PTS)rz.pts[k]=ORIG_PTS[k];
+ localStorage.removeItem('hlt_routes_v1');
+ const rz=JSON.parse(JSON.stringify(DEFAULT_CFG));rz.ts=Date.now();
+ localStorage.setItem('hlt_edit_v2',JSON.stringify(rz));LOCAL_CFG=rz;
  pushHist('恢复默认',rz);cloudPut(rz);
- editKey='gjT3a';if(editOn)refreshSel();pushLog('系统','#ffd43b','已恢复默认流线与车流配置');}
+ editKey='gjT3a';if(editOn)refreshSel();pushLog('系统','#ffd43b','已恢复默认版本（云同步前完整编辑版）并同步云端');}
 const evPos=e=>{const r=cvs.getBoundingClientRect();return[(e.clientX-r.left)/scale,(e.clientY-r.top)/scale]};
 function hitVert(x,y){const pts=ROUTES[editKey].pts;for(let i=0;i<pts.length;i++)if(Math.hypot(pts[i][0]-x,pts[i][1]-y)<12)return i;return -1}
 function hitKK(x,y){for(let i=0;i<KK.length;i++)if(Math.hypot(KK[i][0][0]-x,KK[i][0][1]-y)<12)return i;return -1}
