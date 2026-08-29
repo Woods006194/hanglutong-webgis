@@ -22,6 +22,33 @@ header .sp{flex:1}
 .mbtns button.on{background:rgba(0,190,255,.3);color:#fff;border-color:#00d4ff;box-shadow:0 0 10px rgba(0,212,255,.45)}
 .mbtns button.cbtn{background:rgba(255,215,94,.10);border-color:rgba(255,215,94,.45);color:#ffd75e}
 .mbtns button.cbtn.act{background:rgba(255,215,94,.30);color:#fff;border-color:#ffd75e;box-shadow:0 0 10px rgba(255,215,94,.5)}
+.mbtns button.ebtn{background:rgba(53,224,143,.10);border-color:rgba(53,224,143,.45);color:#a9f5cd}
+.mbtns button.ebtn.act{background:rgba(53,224,143,.30);color:#fff;border-color:#35e08f;box-shadow:0 0 10px rgba(53,224,143,.5)}
+/* ---------- 流线编辑 ---------- */
+#pwdMask{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:99}
+.pwdBox{background:#0a1c38;border:1px solid #00d4ff;border-radius:6px;padding:20px 26px;width:320px;text-align:center;box-shadow:0 0 30px rgba(0,180,255,.35)}
+.pwdBox h4{color:#bfe6ff;font-size:14px;letter-spacing:2px;margin-bottom:12px}
+.pwdBox input{width:100%;background:#06122a;border:1px solid rgba(0,180,255,.4);border-radius:3px;color:#d8ecff;padding:7px 10px;font-size:13px;outline:none;font-family:Consolas,monospace}
+.pwdBox input:focus{border-color:#00d4ff}
+.pwdBox .rw{margin-top:12px;display:flex;gap:10px;justify-content:center}
+.pwdBox .rw button{padding:5px 18px;border-radius:3px;cursor:pointer;font-family:inherit;font-size:12px}
+#pwdOk{background:rgba(0,190,255,.25);border:1px solid #00d4ff;color:#fff}
+#pwdNo{background:transparent;border:1px solid rgba(150,180,210,.4);color:#7fb3dc}
+#pwdErr{display:block;margin-top:8px;color:#ff4d4f;font-size:11px;min-height:14px}
+#editBar{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:30;display:none;gap:8px;align-items:center;background:rgba(10,28,56,.94);border:1px solid #35e08f;border-radius:4px;padding:6px 12px;font-size:12px;color:#a9f5cd;white-space:nowrap}
+#editBar select{background:#06122a;border:1px solid rgba(53,224,143,.5);color:#d8ecff;font-size:12px;padding:3px 6px;border-radius:3px;font-family:inherit}
+#editBar em{font-style:normal;color:#7fb3dc;font-size:11px}
+#editBar button{background:rgba(53,224,143,.15);border:1px solid rgba(53,224,143,.5);color:#a9f5cd;padding:3px 10px;border-radius:3px;cursor:pointer;font-family:inherit;font-size:12px}
+#rulesMask{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:99}
+#rulesBox{max-height:52vh;overflow:auto;text-align:left}
+.rrow{display:flex;align-items:flex-start;gap:8px;margin:9px 0}
+.rrow>b{width:80px;font-size:12px;line-height:24px;flex:none}
+.rrow .rl{display:flex;flex-wrap:wrap;gap:6px;flex:1}
+.re{display:inline-flex;gap:3px;align-items:center;background:rgba(0,70,140,.25);border:1px solid rgba(0,150,255,.25);border-radius:3px;padding:2px 4px}
+.re select{background:#06122a;border:1px solid rgba(0,180,255,.4);color:#d8ecff;font-size:11px;padding:2px 4px;border-radius:3px;font-family:inherit;max-width:150px}
+.re input{width:48px;background:#06122a;border:1px solid rgba(0,180,255,.4);color:#d8ecff;border-radius:3px;padding:2px 4px;font-size:12px;font-family:Consolas,monospace}
+.re i{cursor:pointer;color:#ff4d4f;font-style:normal;padding:0 3px;font-size:13px}
+.rrow .addR{background:transparent;border:1px dashed rgba(53,224,143,.5);color:#a9f5cd;border-radius:3px;font-size:11px;padding:3px 8px;cursor:pointer;font-family:inherit;flex:none}
 /* ---------- layout ---------- */
 #main{display:grid;grid-template-columns:308px 1fr 336px;gap:8px;min-height:0}
 .col{display:flex;flex-direction:column;gap:8px;min-height:0}
@@ -127,6 +154,7 @@ header .sp{flex:1}
   <span class="mbtns">
     <button id="mAuto" class="on">自动演示</button><button id="mAm">早高峰</button><button id="mNt">夜间航班波</button>
     <button id="caseBtn1" class="cbtn">▶ 案例一·夜间地库涌入</button><button id="caseBtn2" class="cbtn">▶ 案例二·早高峰截流绕行</button>
+    <button id="editBtn" class="ebtn">✎ 编辑流线</button>
   </span>
 </header>
 
@@ -181,6 +209,13 @@ header .sp{flex:1}
   <!-- ================= map ================= -->
   <div id="mapWrap">
     <canvas id="map"></canvas>
+    <div id="editBar">
+      <b>流线编辑</b>
+      <select id="routeSel"></select>
+      <button id="addRBtn">＋新增流线</button><button id="delRBtn">🗑删除流线</button><button id="rnBtn">✎改名</button><button id="cfgBtn">车流配置</button>
+      <em>拖拽顶点移动 · 双击线段插点 · 右键顶点删点 · 自动保存</em>
+      <button id="rstBtn">恢复默认</button><button id="exitBtn">退出编辑</button>
+    </div>
     <div id="banner"></div>
     <div id="legend">
       <div class="row"><s class="dot" style="background:#35e08f"></s>私家车 <s class="dot" style="background:#ffb340"></s>网约车 <s class="dot" style="background:#ffd75e"></s>出租车 <s class="dot" style="background:#38bdf8"></s>内部车辆</div>
@@ -243,6 +278,22 @@ header .sp{flex:1}
   </div>
 </div>
 </div>
+<div id="pwdMask">
+  <div class="pwdBox">
+    <h4>流线编辑权限校验</h4>
+    <input id="pwdIn" type="password" placeholder="请输入管理密码" autocomplete="off">
+    <div class="rw"><button id="pwdOk">解锁编辑</button><button id="pwdNo">取消</button></div>
+    <em id="pwdErr"></em>
+  </div>
+</div>
+<div id="rulesMask">
+  <div class="pwdBox" style="width:620px">
+    <h4>车流配置 · 各类型车辆 → 目的地流线权重</h4>
+    <div id="rulesBox"></div>
+    <div class="rw"><button id="rulesOk">保存配置</button><button id="rulesNo">取消</button></div>
+    <em id="rulesTip" style="color:#7fb3dc">某车型留空则使用系统默认目的地逻辑；权重按比例生效，仅影响新生成车辆。</em>
+  </div>
+</div>
 <script>
 "use strict";
 /* ============ 基础工具 ============ */
@@ -255,7 +306,7 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 const BASE=new Image();BASE.src='basemap.jpg'; /* PDF原图渲染·反色深色底图 */
 /* 流线关键节点（像素级标定底图）：p1=空港大道匝道分岔口(杭港高速东) pr=空港大道上桥口(航景路口与通航路口之间) pm=下高架后与空港大道汇合点(与上桥口相近) gj=临湖路·高架上口(T4高架西端) dk=交通中心停车场入口 */
 const PT={toll:[130,306],p1:[620,306],pr:[866,306],pm:[846,306],hj:[620,306],gj:[886,150],dk:[1000,306]};
-function mkRoute(pts){let segs=[],tot=0;for(let i=0;i<pts.length-1;i++){const L=Math.hypot(pts[i+1][0]-pts[i][0],pts[i+1][1]-pts[i][1]);segs.push({a:pts[i],b:pts[i+1],L,st:tot});tot+=L}return{segs,tot}}
+function mkRoute(pts){let segs=[],tot=0;for(let i=0;i<pts.length-1;i++){const L=Math.hypot(pts[i+1][0]-pts[i][0],pts[i+1][1]-pts[i][1]);segs.push({a:pts[i],b:pts[i+1],L,st:tot});tot+=L}return{segs,tot,pts:pts.map(p=>[p[0],p[1]])}}
 function routePos(r,s){s=clamp(s,0,r.tot-0.001);for(let i=r.segs.length-1;i>=0;i--){const g=r.segs[i];if(s>=g.st){const t=(s-g.st)/g.L;return{x:g.a[0]+(g.b[0]-g.a[0])*t,y:g.a[1]+(g.b[1]-g.a[1])*t,ang:Math.atan2(g.b[1]-g.a[1],g.b[0]-g.a[0])}}}return{x:r.segs[0].a[0],y:r.segs[0].a[1],ang:0}}
 /* 五种现场流线：经空港大道/翔越路 上下T3/T4高架（含高架斜线匝道·偏离地面道路段）+ 停车场 + 场区 */
 const ROUTES={
@@ -363,6 +414,9 @@ function stopCase(){if(!scenN)return;SF=null;const n=scenN;scenN=0;
 function destOf(t,strat){const r=Math.random();
  if(SF){if(SF.rideDiku&&t==='ride')return Math.random()<.82?'diku':'wangyue';
   if(SF.detour&&Math.random()<.2)return Math.random()<.5?'gjT4a':'gjT3b';}
+ const rl=(RULES[t]||[]).filter(e=>ROUTES[e[0]]&&e[1]>0); /* 用户车流配置：按权重抽取目的地流线 */
+ if(rl.length){const sum=rl.reduce((s,e)=>s+e[1],0);let x=Math.random()*sum;
+  for(const e of rl){x-=e[1];if(x<=0)return e[0]}return rl[rl.length-1][0];}
  if(t==='inn')return'nei';
  if(t==='tax')return r<.5?'taxi':r<.8?'gjT3a':'diku';
  if(t==='ride')return r<.45?'diku':r<.8?'gjT4a':'wangyue';
@@ -371,6 +425,7 @@ function destOf(t,strat){const r=Math.random();
 function spawn(){const comp=compAt(simT),r=Math.random();
  let t=r<comp.pri?'pri':r<comp.pri+comp.ride?'ride':r<comp.pri+comp.ride+comp.tax?'tax':'inn';
  const dk=destOf(t,stratOn(simT));
+ if(!ROUTES[dk])return;
  vehicles.push({rk:dk,route:ROUTES[dk],s:rnd(0,6),sp:rnd(52,72),type:t,plate:mkPlate(t),dest:dk,conf:ri(70,97)});
  if(Math.random()<.5)pushFeed(vehicles[vehicles.length-1]);}
 /* ============ DOM：feed / log ============ */
@@ -446,6 +501,12 @@ function draw(){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,LW,LH);
  for(const v of vehicles){const p=routePos(v.route,v.s);v.px=p.x;v.py=p.y;
   ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.ang);ctx.fillStyle=TYPES[v.type].c;
   ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=5;ctx.fillRect(-4.5,-2.2,9,4.4);ctx.restore();}
+ /* 流线编辑手柄 */
+ if(editOn){const pts=ROUTES[editKey].pts;ctx.save();
+  ctx.setLineDash([6,6]);poly('rgba(255,255,255,.85)',1.5,pts);ctx.setLineDash([]);
+  pts.forEach((p,i)=>{ctx.fillStyle=i===0?'#35e08f':i===pts.length-1?'#ff4d4f':'#00d4ff';
+   ctx.fillRect(p[0]-4,p[1]-4,8,8);ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.strokeRect(p[0]-4,p[1]-4,8,8);});
+  ctx.restore();}
 }
 /* ============ 流量曲线 ============ */
 const chCvs=$('chart'),cctx=chCvs.getContext('2d');
@@ -536,6 +597,9 @@ function loop(now){const dt=Math.min(.06,(now-last)/1000);last=now;simT+=dt;live
 /* ============ 交互 ============ */
 cvs.addEventListener('mousemove',e=>{const r=cvs.getBoundingClientRect();
  const x=(e.clientX-r.left)/scale,y=(e.clientY-r.top)/scale;
+ if(editOn){if(dragI>=0){const pts=ROUTES[editKey].pts;pts[dragI]=[clamp(x,0,LW),clamp(y,0,LH)];setRoutePts(editKey,pts);}
+  cvs.style.cursor=dragI>=0?'grabbing':hitVert(x,y)>=0?'grab':'crosshair';$('tip').style.display='none';return;}
+ cvs.style.cursor='default';
  let best=null,bd=200;for(const v of vehicles){if(v.px==null)continue;const d=(v.px-x)**2+(v.py-y)**2;if(d<bd){bd=d;best=v}}
  const tip=$('tip');
  if(best){tip.style.display='block';tip.style.left=(cvs.offsetLeft+best.px*scale+14)+'px';tip.style.top=(cvs.offsetTop+best.py*scale-12)+'px';
@@ -549,6 +613,93 @@ $('mAm').onclick=e=>setMode('am',e.target);
 $('mNt').onclick=e=>setMode('nt',e.target);
 $('caseBtn1').onclick=()=>startCase(1);
 $('caseBtn2').onclick=()=>startCase(2);
+/* ============ 流线手动编辑（密码解锁 · localStorage持久化） ============ */
+const EDIT_PWD='jcga12345';
+let editOn=false,editKey='gjT3a',dragI=-1;
+const ORIG_PTS={};for(const k in ROUTES)ORIG_PTS[k]=ROUTES[k].pts.map(p=>[p[0],p[1]]);
+function setRoutePts(k,pts){const r=mkRoute(pts);ROUTES[k].segs=r.segs;ROUTES[k].tot=r.tot;ROUTES[k].pts=r.pts;}
+let RULES={};const CUSTOM={}; /* RULES=车流配置 车型->[[流线键,权重],...]；CUSTOM=自定义流线登记 */
+function saveEdit(){const o={pts:{},custom:{},rules:RULES};
+ for(const k in ROUTES){if(CUSTOM[k])o.custom[k]={n:DESTN[k],p:ROUTES[k].pts};else o.pts[k]=ROUTES[k].pts;}
+ localStorage.setItem('hlt_edit_v2',JSON.stringify(o));}
+const persistRoutes=saveEdit;
+function addCustom(k,name,pts){ROUTES[k]=mkRoute(pts);DESTN[k]=name;ROUTE_NODE[k]=null;CUSTOM[k]=1;}
+try{const o=JSON.parse(localStorage.getItem('hlt_edit_v2')||'null');
+ if(o){for(const k in(o.pts||{}))if(ROUTES[k]&&(o.pts[k]||[]).length>=2)setRoutePts(k,o.pts[k]);
+  for(const k in(o.custom||{})){const c=o.custom[k];if(c&&(c.p||[]).length>=2)addCustom(k,c.n||k,c.p);}
+  RULES=o.rules||{};}
+ const old=JSON.parse(localStorage.getItem('hlt_routes_v1')||'null');
+ if(old)for(const k in old)if(ROUTES[k]&&old[k].length>=2)setRoutePts(k,old[k]);
+}catch(e){}
+function refreshSel(){const sel=$('routeSel');sel.innerHTML='';
+ for(const k in ROUTES){const o=document.createElement('option');o.value=k;o.textContent=(DESTN[k]||k)+(CUSTOM[k]?' ·自定义':'');sel.appendChild(o);}
+ if(!ROUTES[editKey])editKey=Object.keys(ROUTES)[0];sel.value=editKey;}
+function newRoute(){let n=1;while(ROUTES['cus'+n])n++;const k='cus'+n;
+ addCustom(k,'自定义流线'+n,[[130,306],[380,306],[620,306]]);editKey=k;saveEdit();refreshSel();
+ pushLog('系统','#ffd43b','已新增流线：'+DESTN[k]+' · 拖拽顶点/双击插点调整轨迹');}
+function delRoute(){const k=editKey;if(!CUSTOM[k]){pushLog('系统','#ff4d4f','默认流线不可删除 · 仅可删除自定义流线');return;}
+ delete ROUTES[k];delete DESTN[k];delete CUSTOM[k];
+ for(const t in RULES)RULES[t]=RULES[t].filter(e=>e[0]!==k);
+ vehicles=vehicles.filter(v=>v.rk!==k);
+ editKey=Object.keys(ROUTES)[0];saveEdit();refreshSel();pushLog('系统','#ffd43b','已删除自定义流线 '+k);}
+function resetRoutes(){for(const k in CUSTOM){delete ROUTES[k];delete DESTN[k];delete CUSTOM[k];}
+ for(const k in ROUTES)if(ORIG_PTS[k])setRoutePts(k,ORIG_PTS[k].map(p=>[p[0],p[1]]));
+ RULES={};vehicles=[];localStorage.removeItem('hlt_edit_v2');localStorage.removeItem('hlt_routes_v1');
+ editKey='gjT3a';if(editOn)refreshSel();pushLog('系统','#ffd43b','已恢复默认流线与车流配置');}
+const evPos=e=>{const r=cvs.getBoundingClientRect();return[(e.clientX-r.left)/scale,(e.clientY-r.top)/scale]};
+function hitVert(x,y){const pts=ROUTES[editKey].pts;for(let i=0;i<pts.length;i++)if(Math.hypot(pts[i][0]-x,pts[i][1]-y)<12)return i;return -1}
+function segDist(px,py,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L2=dx*dx+dy*dy||1;let t=clamp(((px-a[0])*dx+(py-a[1])*dy)/L2,0,1);return Math.hypot(px-(a[0]+dx*t),py-(a[1]+dy*t))}
+function tryPwd(){if($('pwdIn').value===EDIT_PWD){$('pwdMask').style.display='none';enterEdit();}
+ else{$('pwdErr').textContent='密码错误，请重新输入';$('pwdIn').value='';$('pwdIn').focus();}}
+function enterEdit(){editOn=true;dragI=-1;$('editBtn').classList.add('act');$('editBtn').textContent='✎ 流线编辑中 · 点击退出';
+ $('editBar').style.display='flex';refreshSel();
+ pushLog('系统','#ffd43b','流线编辑已解锁：拖拽顶点/双击插点/右键删点 · 修改自动保存');}
+function exitEdit(){editOn=false;dragI=-1;$('editBtn').classList.remove('act');$('editBtn').textContent='✎ 编辑流线';$('editBar').style.display='none';}
+$('editBtn').onclick=()=>{if(editOn){exitEdit();return}$('pwdMask').style.display='flex';$('pwdIn').value='';$('pwdErr').textContent='';setTimeout(()=>$('pwdIn').focus(),60);};
+$('pwdNo').onclick=()=>$('pwdMask').style.display='none';
+$('pwdOk').onclick=tryPwd;
+$('pwdIn').onkeydown=e=>{if(e.key==='Enter')tryPwd()};
+$('routeSel').onchange=e=>{editKey=e.target.value;dragI=-1;};
+$('rstBtn').onclick=resetRoutes;
+$('exitBtn').onclick=exitEdit;
+$('addRBtn').onclick=newRoute;
+$('delRBtn').onclick=delRoute;
+$('rnBtn').onclick=()=>{const k=editKey;
+ if(!CUSTOM[k]){pushLog('系统','#ff4d4f','默认流线名称不可修改 · 仅自定义流线可改名');return;}
+ const nm=prompt('流线名称：',DESTN[k]||k);
+ if(nm&&nm.trim()){DESTN[k]=nm.trim();saveEdit();refreshSel();pushLog('系统','#35e08f','流线已改名：'+DESTN[k]);}};
+/* ---- 车流配置（各车型→目的地流线权重） ---- */
+function ruleEntry(key,w){const d=document.createElement('span');d.className='re';
+ const sel=document.createElement('select');
+ for(const k in ROUTES){const o=document.createElement('option');o.value=k;o.textContent=DESTN[k]||k;if(k===key)o.selected=true;sel.appendChild(o);}
+ const inp=document.createElement('input');inp.value=w;inp.title='权重（按比例生效）';
+ const del=document.createElement('i');del.textContent='×';del.onclick=()=>d.remove();
+ d.appendChild(sel);d.appendChild(inp);d.appendChild(del);return d;}
+function renderRules(){const box=$('rulesBox');box.innerHTML='';
+ for(const t in TYPES){const row=document.createElement('div');row.className='rrow';
+  const b=document.createElement('b');b.textContent=TYPES[t].n;b.style.color=TYPES[t].c;row.appendChild(b);
+  const list=document.createElement('div');list.className='rl';list.dataset.t=t;
+  for(const e of (RULES[t]||[]))if(ROUTES[e[0]])list.appendChild(ruleEntry(e[0],e[1]));
+  const add=document.createElement('button');add.className='addR';add.textContent='＋添加目的地';
+  add.onclick=()=>list.insertBefore(ruleEntry(Object.keys(ROUTES)[0],50),add);
+  list.appendChild(add);row.appendChild(list);box.appendChild(row);}}
+$('cfgBtn').onclick=()=>{renderRules();$('rulesMask').style.display='flex';};
+$('rulesNo').onclick=()=>$('rulesMask').style.display='none';
+$('rulesOk').onclick=()=>{const nr={};
+ for(const t in TYPES){const list=$('rulesBox').querySelector(`.rl[data-t="${t}"]`);const arr=[];
+  list.querySelectorAll('.re').forEach(d=>{const k=d.querySelector('select').value,w=parseFloat(d.querySelector('input').value);
+   if(k&&ROUTES[k]&&w>0)arr.push([k,w]);});
+  if(arr.length)nr[t]=arr;}
+ RULES=nr;saveEdit();$('rulesMask').style.display='none';
+ const cnt=Object.keys(RULES).length;
+ pushLog('配置','#35e08f',cnt?`车流配置已保存 · ${cnt} 类车辆按权重分配目的地流线（仅影响新入场车辆）`:'车流配置已清空 · 恢复系统默认目的地逻辑');};
+cvs.addEventListener('mousedown',e=>{if(!editOn||e.button!==0)return;const[x,y]=evPos(e);dragI=hitVert(x,y);});
+window.addEventListener('mouseup',()=>{if(dragI>=0){dragI=-1;persistRoutes();}});
+cvs.addEventListener('dblclick',e=>{if(!editOn)return;const[x,y]=evPos(e);const pts=ROUTES[editKey].pts;let bi=-1,bd=14;
+ for(let i=0;i<pts.length-1;i++){const d=segDist(x,y,pts[i],pts[i+1]);if(d<bd){bd=d;bi=i}}
+ if(bi>=0){pts.splice(bi+1,0,[Math.round(x),Math.round(y)]);setRoutePts(editKey,pts);persistRoutes();}});
+cvs.addEventListener('contextmenu',e=>{if(!editOn)return;e.preventDefault();const[x,y]=evPos(e);const i=hitVert(x,y);const pts=ROUTES[editKey].pts;
+ if(i>=0&&pts.length>2){pts.splice(i,1);setRoutePts(editKey,pts);persistRoutes();}});
 setInterval(()=>{if(SF&&scenN){const c=CASES[scenN].clock0,s=Math.floor(scenT);
   const hh=String(c[0]+Math.floor((c[1]*60+c[2]+s)/3600)).padStart(2,'0'),mm=String(Math.floor((c[1]*60+c[2]+s)/60)%60).padStart(2,'0'),ss=String((c[2]+s)%60).padStart(2,'0');
   $('clock').textContent='2026-08-29 '+hh+':'+mm+':'+ss;return;}
