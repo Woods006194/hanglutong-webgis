@@ -664,10 +664,11 @@ function pushCloud(){clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>cloudPut
 fetch('https://api.github.com/gists/'+GIST_ID,{cache:'no-store'})
  .then(r=>r.ok?r.json():null)
  .then(g=>{let o=null;try{o=JSON.parse(g.files['hlt_config.json'].content)}catch(e){}
-  if(LOCAL_CFG){/* 云端更新则覆盖本机；本机较新（或云端无时间戳）则回写云端统一 */
+  if(LOCAL_CFG){/* 云端更新则覆盖本机并落盘；本机更新则回写云端；时间戳相等视为已同步 */
    if(o&&o.ts&&(LOCAL_CFG.ts||0)<o.ts){applyConfig(o);
+    try{localStorage.setItem('hlt_edit_v2',JSON.stringify(o))}catch(e){}
     pushLog('系统','#35e08f','云端有更新版本 · 已应用最新配置');}
-   else if(!o||!o.ts||(LOCAL_CFG.ts||0)>=(o.ts||0)){cloudPut(LOCAL_CFG);
+   else if(!o||!o.ts||(LOCAL_CFG.ts||0)>(o.ts||0)){cloudPut(LOCAL_CFG);
     pushLog('系统','#35e08f','以本机编辑配置为准 · 已回写云端');}
    return;}
   if(o&&typeof o==='object'){applyConfig(o);
