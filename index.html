@@ -457,18 +457,16 @@ function draw(){ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,LW,LH);
  /* 底图：PDF原图（Windows.Data.Pdf渲染·反色深色化） */
  if(BASE.complete&&BASE.naturalWidth)ctx.drawImage(BASE,0,0,LW,LH);
  const lh=lvlOf(nodes.hj.q),gj=lvlOf(nodes.gj.q),dk=lvlOf(nodes.dk.q);
- /* 实时拥堵着色（贴合现场流线：空港大道主线/南环/东竖/北高架/临湖路T4匝道/翔越路进场） */
- glow([[130,306],[620,306]],lh);                       /* 空港大道主线（西大门→分岔口） */
- glow([[620,306],[1000,306]],dk);                      /* 主线东段→交通中心停车场 */
- glow([[620,306],[779,415],[1250,415],[1250,150],[886,150]],gj); /* T3高架环线（斜线匝道→南环→东竖↑北高架→下坡匝道） */
- glow([[866,306],[886,415]],gj);                        /* 空港大道上桥口斜线匝道→临湖路南端 */
- glow([[886,415],[886,150]],gj);                        /* T4高架（临湖路匝道↑→高架上口） */
- glow([[779,385],[886,415]],gj);                        /* 翔越路航景路口斜线匝道 */
- glow([[886,150],[846,306]],gj);                        /* 下高架匝道（高架上口→空港大道汇合点·与上桥口相近） */
- glow([[443,306],[443,385],[779,385]],lh);             /* 翔越路进场（航安路↓→翔越路→翔越路航景路口） */
- /* 绕行诱导动画：航安路↓翔越路→翔越路航景路口→斜线匝道→临湖路↑高架 */
- if(SF?SF.det:stratOn(simT)){ctx.save();ctx.setLineDash([10,16]);ctx.lineDashOffset=-simT*50;
-  poly('rgba(0,212,255,.75)',2,[[443,306],[443,385],[779,385],[886,415],[886,150]]);ctx.restore();}
+ /* 实时拥堵着色：沿各流线pts绘制 · 与编辑结果实时同步 */
+ for(const k of ['gjT3a','gjT3b','gjT4a','gjT4b'])if(ROUTES[k])glow(ROUTES[k].pts,gj); /* 高架流线（含匝道/环线） */
+ for(const k of ['wangyue','taxi','nei'])if(ROUTES[k])glow(ROUTES[k].pts,lh);          /* 停车场/工作区流线 */
+ for(const k in CUSTOM)if(ROUTES[k])glow(ROUTES[k].pts,Math.max(lh,gj,dk));            /* 自定义流线 · 按总体级别着色 */
+ if(ROUTES.diku)glow(ROUTES.diku.pts.slice(1),dk);           /* 主线东段→交通中心停车场 */
+ if(ROUTES.diku)glow(ROUTES.diku.pts.slice(0,2),lh);         /* 空港大道主线（西大门→分岔口）·最后覆盖 */
+ /* 绕行诱导动画：派生自翔越路↕T4高架流线（航安路↓翔越路→上桥交叉口→匝道→临湖路↑） */
+ if(SF?SF.det:stratOn(simT)){const gp=ROUTES.gjT4a?ROUTES.gjT4a.pts:null;
+  if(gp&&gp.length>5){ctx.save();ctx.setLineDash([10,16]);ctx.lineDashOffset=-simT*50;
+   poly('rgba(0,212,255,.75)',2,gp.slice(1,gp.length-3));ctx.restore();}}
  /* 导航平台修正标注 */
  ctx.textAlign='center';ctx.fillStyle='#ffd75e';ctx.font='10px Microsoft YaHei';
  ctx.fillText('机场1号路（导航实际名·航站楼南环）',1010,432);
